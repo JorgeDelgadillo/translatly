@@ -29,6 +29,7 @@ pnpm dev / pnpm dev:firefox   # watch mode per browser
 pnpm build / pnpm build:firefox
 pnpm zip / pnpm zip:firefox   # store packages
 pnpm check                    # svelte-check type checking
+pnpm copy-ort-wasm            # copy ORT .wasm binaries into public/ort (runs on postinstall)
 ```
 
 ## Conventions (must follow)
@@ -48,9 +49,17 @@ pnpm check                    # svelte-check type checking
 ## Architecture decisions
 
 - **Where models run**: Chrome MV3 service workers can be killed mid-inference,
-  so the translation engine will live in an offscreen document. Firefox has no
-  offscreen API, so the engine runs in the background event page with
-  keep-alive during active translations.
+  so the translation engine lives in an offscreen document (created on demand by
+  the background coordinator). Firefox has no offscreen API, so the engine runs
+  in the persistent background page (MV2) and answers requests directly.
+- **Inference runtime**: `@huggingface/transformers` v4 + ONNX Runtime Web,
+  WASM backend (SIMD, single thread — no SharedArrayBuffer in extension pages).
+  The `.wasm` binaries are bundled into the extension (`public/ort`, copied from
+  the nested `onnxruntime-web` dependency by `scripts/copy-ort-wasm.mjs`) because
+  extensions must not load remote code. `wasmPaths` points at those files;
+  models use `dtype: 'q8'`. WebGPU (`jsep` build) is a later-phase opt-in.
+- **Message flow**: UI -> background (`translate`) -> engine host
+  (`engine:translate`); progress is broadcast as `engine:progress`.
 - **Model strategy (hybrid)**: per-pair OPUS-MT models (quantized int8, ~110 MB
   per direction) downloaded on demand by default; optional NLLB-200-distilled-600M
   (~900 MB) as fallback for uncovered pairs. Only one model kept in memory (LRU).
@@ -62,8 +71,8 @@ pnpm check                    # svelte-check type checking
 
 ## Roadmap (phase = commit + review stop)
 
-1. ✅ Scaffold WXT + Svelte (this commit)
-2. Translation engine PoC (OPUS-MT en→es, WASM, download progress)
+1. ✅ Scaffold WXT + Svelte
+2. ✅ Translation engine PoC (OPUS-MT en→es, WASM, download progress)
 3. Typed messaging + translation queue with cancellation
 4. Popup MVP (quick translation with default languages)
 5. Selection bubble (Shadow DOM) + context menu
