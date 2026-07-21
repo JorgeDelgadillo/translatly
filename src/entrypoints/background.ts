@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
-import { handleEngineTranslate, startEngineHost } from '@/lib/engine/engine-host';
-import type { TranslateRequest, TranslateResponse } from '@/lib/engine/protocol';
+import { startEngineHost } from '@/lib/engine/engine-host';
+import { isEngineInternalMessage, isUiToEngineMessage } from '@/lib/messaging/protocol';
 
 const supportsOffscreen = (): boolean => typeof browser.offscreen !== 'undefined';
 
@@ -14,32 +14,48 @@ async function ensureOffscreenDocument(): Promise<void> {
   });
 }
 
+/**
+ * Resolves once the offscreen engine host has registered its message listener.
+ * The first message after the background service worker starts is held back
+ * until the offscreen document's script has finished loading; subsequent
+ * messages resolve immediately (the promise is memoised).
+ */
+let engineReadyPromise: Promise<void> | null = null;
+function whenEngineReady(): Promise<void> {
+  if (engineReadyPromise) return engineReadyPromise;
+  engineReadyPromise = new Promise<void>((resolve) => {
+    const onReady = (msg: unknown) => {
+      if (isEngineInternalMessage(msg)) {
+        browser.runtime.onMessage.removeListener(onReady);
+        resolve();
+      }
+    };
+    browser.runtime.onMessage.addListener(onReady);
+    // Safety: if the offscreen document was created in a previous service
+    // worker lifetime we will never see another `engine:ready`; do not block
+    // the user forever in that case.
+    setTimeout(() => {
+      browser.runtime.onMessage.removeListener(onReady);
+      resolve();
+    }, 2000);
+  });
+  return engineReadyPromise;
+}
+
 export default defineBackground(() => {
   if (supportsOffscreen()) {
-    // Chromium MV3: relay translation requests to the offscreen engine host.
-    browser.runtime.onMessage.addListener(
-      async (message): Promise<TranslateResponse | undefined> => {
-        if (message?.type !== 'translate') return undefined;
-        const { text, srcLang, tgtLang } = message as TranslateRequest;
-        await ensureOffscreenDocument();
-        return (await browser.runtime.sendMessage({
-          type: 'engine:translate',
-          text,
-          srcLang,
-          tgtLang,
-        })) as TranslateResponse;
-      },
-    );
+    // Chromium MV3: relay UI messages to the offscreen engine host. Results
+    // come back as engine broadcasts; no sendResponse is needed.
+    browser.runtime.onMessage.addListener(async (msg: unknown) => {
+      if (!isUiToEngineMessage(msg)) return undefined;
+      await ensureOffscreenDocument();
+      await whenEngineReady();
+      browser.runtime.sendMessage(msg).catch(() => {});
+      return undefined;
+    });
   } else {
     // Firefox MV2 has no offscreen API: the persistent background page hosts
     // the engine itself and answers translation requests directly.
     startEngineHost();
-    browser.runtime.onMessage.addListener(
-      async (message): Promise<TranslateResponse | undefined> => {
-        if (message?.type !== 'translate') return undefined;
-        const { text, srcLang, tgtLang } = message as TranslateRequest;
-        return handleEngineTranslate({ type: 'engine:translate', text, srcLang, tgtLang });
-      },
-    );
   }
 });

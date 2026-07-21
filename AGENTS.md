@@ -58,8 +58,15 @@ pnpm copy-ort-wasm            # copy ORT .wasm binaries into public/ort (runs on
   the nested `onnxruntime-web` dependency by `scripts/copy-ort-wasm.mjs`) because
   extensions must not load remote code. `wasmPaths` points at those files;
   models use `dtype: 'q8'`. WebGPU (`jsep` build) is a later-phase opt-in.
-- **Message flow**: UI -> background (`translate`) -> engine host
-  (`engine:translate`); progress is broadcast as `engine:progress`.
+- **Message flow**: UI -> background (`translate:request`) -> engine host
+  (`translate:request`). The engine owns a single `TranslationQueue` (serial
+  execution, `AbortController` per job) and broadcasts lifecycle events:
+  `translate:queued`, `translate:progress`, `translate:result`, `translate:error`.
+  All messages are discriminated unions tagged by `type` and correlated by
+  `requestId`. UI sends `translate:cancel` / `translate:cancelAll` to abort
+  individual jobs or everything. On Chromium the background waits for an
+  `engine:ready` handshake before forwarding the first request, avoiding a
+  race with the offscreen document's load.
 - **Model strategy (hybrid)**: per-pair OPUS-MT models (quantized int8, ~110 MB
   per direction) downloaded on demand by default; optional NLLB-200-distilled-600M
   (~900 MB) as fallback for uncovered pairs. Only one model kept in memory (LRU).
@@ -73,7 +80,7 @@ pnpm copy-ort-wasm            # copy ORT .wasm binaries into public/ort (runs on
 
 1. ✅ Scaffold WXT + Svelte
 2. ✅ Translation engine PoC (OPUS-MT en→es, WASM, download progress)
-3. Typed messaging + translation queue with cancellation
+3. ✅ Typed messaging + translation queue with cancellation
 4. Popup MVP (quick translation with default languages)
 5. Selection bubble (Shadow DOM) + context menu
 6. Full translator page + history + settings + default languages
