@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { translate, type ModelDownloadProgress } from './translator';
+import { getDefaultWasmBaseUrl } from './engine-host';
 import type {
   EngineBroadcast,
   TranslateErrorMessage,
@@ -75,8 +76,8 @@ export class TranslationQueue {
 
         this.active.set(job.requestId, job.controller);
         try {
-          const translation = await translate(job.text, {
-            wasmBaseUrl: browser.runtime.getURL('/ort/ort-wasm-simd-threaded.wasm').replace(/[^/]+$/, ''),
+          const translation = await translate(job.text, job.srcLang, job.tgtLang, {
+            wasmBaseUrl: getDefaultWasmBaseUrl(),
             signal: job.controller.signal,
             onProgress: (progress) => this.broadcastProgress(job.requestId, progress),
           });

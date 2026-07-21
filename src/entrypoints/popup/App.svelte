@@ -1,139 +1,195 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import {
     sendTranslateRequest,
     sendTranslateCancel,
-    sendTranslateCancelAll,
     onEngineBroadcast,
   } from '@/lib/messaging/translate';
+  import { LANGUAGES, getPair, supportedTargets, languageName } from '@/lib/engine/registry';
+  import { loadDefaultLanguages, saveDefaultLanguages } from '@/lib/settings';
 
-  // Temporary engine proof-of-concept UI. Replaced by the real quick-translate
-  // popup in phase 4. Demonstrates the typed messaging protocol + queue:
-  // multiple in-flight jobs, per-job cancellation, queue position, progress.
+  type Status =
+    | { kind: 'idle' }
+    | { kind: 'busy'; text: string }
+    | { kind: 'error'; text: string };
 
-  type JobStatus = 'queued' | 'running' | 'done' | 'cancelled' | 'error';
-  interface Job {
-    requestId: string;
-    text: string;
-    status: JobStatus;
-    position?: number;
-    progress?: number;
-    file?: string;
-    result?: string;
-    error?: string;
-  }
-
+  let loaded = $state(false);
+  let source = $state('en');
+  let target = $state('es');
   let text = $state('Hello, how are you?');
-  let jobs = $state<Job[]>([]);
+  let result = $state('');
+  let resultPair = $state<{ source: string; target: string } | null>(null);
+  let status = $state<Status>({ kind: 'idle' });
+  let busy = $state(false);
+  let copied = $state(false);
+  let currentRequestId: string | null = null;
 
-  function patch(id: string, change: Partial<Job>) {
-    const i = jobs.findIndex((j) => j.requestId === id);
-    if (i >= 0) jobs[i] = { ...jobs[i]!, ...change };
-  }
+  const availableTargets = $derived(supportedTargets(source));
 
+  onMount(async () => {
+    const defaults = await loadDefaultLanguages();
+    source = defaults.source;
+    target = defaults.target;
+    loaded = true;
+  });
+
+  // Keep the target valid for the chosen source and persist defaults.
+  $effect(() => {
+    if (!loaded) return;
+    if (availableTargets.length > 0 && !availableTargets.includes(target)) {
+      target = availableTargets[0]!;
+      return; // re-run after target is corrected, then persist
+    }
+    void saveDefaultLanguages({ source, target });
+  });
+
+  // Subscribe to engine broadcasts and correlate with the active request.
   $effect(() => {
     const off = onEngineBroadcast((msg) => {
+      if (currentRequestId == null || msg.requestId !== currentRequestId) return;
       switch (msg.type) {
         case 'translate:queued':
-          patch(msg.requestId, { status: 'queued', position: msg.position });
+          status = { kind: 'busy', text: `Queued · position ${msg.position}` };
           break;
         case 'translate:progress':
-          patch(msg.requestId, {
-            status: 'running',
-            progress: msg.progress,
-            file: msg.file,
-            position: undefined,
-          });
+          status = {
+            kind: 'busy',
+            text:
+              msg.progress != null
+                ? `Loading model · ${msg.progress.toFixed(0)}%`
+                : `Loading model · ${msg.status}`,
+          };
           break;
         case 'translate:result':
-          patch(msg.requestId, { status: 'done', result: msg.translation, progress: undefined });
+          result = msg.translation;
+          resultPair = { source, target };
+          status = { kind: 'idle' };
+          busy = false;
+          currentRequestId = null;
+          copied = false;
           break;
         case 'translate:error':
-          patch(msg.requestId, {
-            status: msg.cancelled ? 'cancelled' : 'error',
-            error: msg.error,
-          });
+          status = {
+            kind: 'error',
+            text: msg.cancelled ? 'Cancelled' : msg.error || 'Translation failed',
+          };
+          busy = false;
+          currentRequestId = null;
           break;
       }
     });
     return off;
   });
 
-  function fire(count: number) {
-    const t = text;
-    for (let i = 0; i < count; i++) {
-      const requestId = sendTranslateRequest(t, 'en', 'es');
-      jobs = [...jobs, { requestId, text: t, status: 'queued' }];
+  function runTranslate() {
+    if (busy || !text.trim() || !source || !target) return;
+    if (!getPair(source, target)) {
+      status = { kind: 'error', text: `No model for ${languageName(source)} → ${languageName(target)}` };
+      return;
+    }
+    result = '';
+    resultPair = null;
+    copied = false;
+    const id = sendTranslateRequest(text, source, target);
+    currentRequestId = id;
+    busy = true;
+    status = { kind: 'busy', text: 'Translating…' };
+  }
+
+  function cancel() {
+    if (currentRequestId) {
+      sendTranslateCancel(currentRequestId);
+      status = { kind: 'busy', text: 'Cancelling…' };
     }
   }
 
-  function cancel(id: string) {
-    sendTranslateCancel(id);
+  function swap() {
+    const previous = source;
+    source = target;
+    target = previous;
+    result = '';
+    resultPair = null;
   }
 
-  function cancelAll() {
-    sendTranslateCancelAll();
-    jobs = jobs.map((j) =>
-      j.status === 'done' || j.status === 'error' || j.status === 'cancelled'
-        ? j
-        : { ...j, status: 'cancelled', error: 'cancelled' },
-    );
-  }
-
-  function clearFinished() {
-    jobs = jobs.filter((j) => j.status !== 'done' && j.status !== 'error' && j.status !== 'cancelled');
-  }
-
-  function statusLabel(j: Job): string {
-    if (j.status === 'queued') return `queued${j.position ? ` · #${j.position}` : ''}`;
-    if (j.status === 'running') {
-      if (j.file) return j.progress != null ? `running · ${j.file} ${j.progress.toFixed(0)}%` : `running · ${j.file}`;
-      return 'running';
+  async function copyResult() {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result);
+      copied = true;
+      setTimeout(() => (copied = false), 1500);
+    } catch {
+      status = { kind: 'error', text: 'Could not copy to clipboard' };
     }
-    return j.status;
   }
 </script>
 
 <main>
-  <h1>Translatly <span>engine PoC</span></h1>
+  <header>
+    <h1>Translatly</h1>
+  </header>
 
-  <label>
-    English
-    <textarea bind:value={text} rows="2"></textarea>
+  <div class="pickers">
+    <label>
+      <span>From</span>
+      <select bind:value={source}>
+        {#each LANGUAGES as lang (lang.code)}
+          <option value={lang.code}>{lang.name}</option>
+        {/each}
+      </select>
+    </label>
+
+    <button class="swap" onclick={swap} disabled={busy} title="Swap languages" aria-label="Swap languages">
+      ⇄
+    </button>
+
+    <label>
+      <span>To</span>
+      <select bind:value={target} disabled={availableTargets.length === 0}>
+        {#each availableTargets as code (code)}
+          <option value={code}>{languageName(code)}</option>
+        {/each}
+      </select>
+    </label>
+  </div>
+
+  <label class="field">
+    <span>{languageName(source)}</span>
+    <textarea
+      bind:value={text}
+      rows="3"
+      placeholder="Text to translate…"
+      onkeydown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+          e.preventDefault();
+          runTranslate();
+        }
+      }}
+    ></textarea>
   </label>
 
   <div class="actions">
-    <button onclick={() => fire(1)} disabled={!text.trim()}>Translate</button>
-    <button onclick={() => fire(3)} disabled={!text.trim()}>Translate ×3</button>
-    <button onclick={cancelAll} class="danger" disabled={!jobs.some((j) => j.status === 'queued' || j.status === 'running')}>
-      Cancel all
+    <button class="primary" onclick={runTranslate} disabled={busy || !text.trim()}>
+      {busy ? 'Working…' : 'Translate'}
     </button>
-    <button onclick={clearFinished} disabled={!jobs.some((j) => j.status === 'done' || j.status === 'error' || j.status === 'cancelled')}>
-      Clear finished
-    </button>
+    {#if busy}
+      <button onclick={cancel}>Cancel</button>
+    {/if}
   </div>
 
-  {#if jobs.length === 0}
-    <p class="hint">Fire one job, or hit ×3 to watch the queue.</p>
-  {:else}
-    <ul class="jobs">
-      {#each jobs as j (j.requestId)}
-        <li class={j.status}>
-          <div class="row">
-            <code>{j.requestId.slice(0, 8)}</code>
-            <span class="status">{statusLabel(j)}</span>
-            {#if j.status === 'queued' || j.status === 'running'}
-              <button onclick={() => cancel(j.requestId)} class="danger small">Cancel</button>
-            {/if}
-          </div>
-          {#if j.result}
-            <output>{j.result}</output>
-          {/if}
-          {#if j.status === 'error' && j.error}
-            <p class="err-text">{j.error}</p>
-          {/if}
-        </li>
-      {/each}
-    </ul>
+  {#if result && resultPair}
+    <section class="result" aria-live="polite">
+      <div class="result-head">
+        <span class="pair">{languageName(resultPair.source)} → {languageName(resultPair.target)}</span>
+        <button class="small" onclick={copyResult}>{copied ? 'Copied' : 'Copy'}</button>
+      </div>
+      <p>{result}</p>
+    </section>
+  {/if}
+
+  {#if status.kind !== 'idle'}
+    <p class="status" class:error={status.kind === 'error'} aria-live="polite">
+      {status.text}
+    </p>
   {/if}
 </main>
 
@@ -141,43 +197,77 @@
   main {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem;
-    min-width: 320px;
+    gap: 0.6rem;
+    padding: 0.9rem;
+    min-width: 340px;
   }
 
-  h1 {
-    font-size: 1.1rem;
+  header h1 {
     margin: 0;
+    font-size: 1.1rem;
   }
 
-  h1 span {
-    font-weight: 400;
-    opacity: 0.6;
-    font-size: 0.85rem;
+  .pickers {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.4rem;
+    align-items: end;
   }
 
-  label {
+  .pickers label {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.85rem;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+    opacity: 0.8;
   }
 
-  textarea {
+  .pickers select,
+  .field textarea {
     font: inherit;
-    padding: 0.5rem;
+    padding: 0.4rem 0.5rem;
     border-radius: 6px;
     border: 1px solid #555;
     background: transparent;
     color: inherit;
+  }
+
+  .pickers select:disabled {
+    opacity: 0.5;
+  }
+
+  .swap {
+    align-self: end;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: transparent;
+    color: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .swap:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+
+  .field textarea {
     resize: vertical;
+    min-height: 3.2rem;
   }
 
   .actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   button {
@@ -195,8 +285,15 @@
     cursor: default;
   }
 
-  button.danger {
-    border-color: #a44;
+  button.primary {
+    background: #2a6fdb;
+    border-color: #2a6fdb;
+    color: white;
+  }
+
+  button.primary:disabled {
+    background: #555;
+    border-color: #555;
   }
 
   button.small {
@@ -204,69 +301,35 @@
     font-size: 0.75rem;
   }
 
-  .hint {
-    margin: 0;
-    font-size: 0.8rem;
-    opacity: 0.6;
-  }
-
-  .jobs {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    max-height: 320px;
-    overflow-y: auto;
-  }
-
-  .jobs li {
+  .result {
     border: 1px solid #333;
     border-radius: 6px;
-    padding: 0.5rem;
-    font-size: 0.8rem;
+    padding: 0.6rem;
   }
 
-  .jobs li.done {
-    border-color: #4a7;
-  }
-
-  .jobs li.error {
-    border-color: #a44;
-  }
-
-  .jobs li.cancelled {
-    border-color: #666;
-    opacity: 0.7;
-  }
-
-  .row {
+  .result-head {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
-  }
-
-  .row code {
-    font-family: ui-monospace, monospace;
+    margin-bottom: 0.3rem;
     font-size: 0.75rem;
     opacity: 0.7;
   }
 
-  .row .status {
-    flex: 1;
-    word-break: break-all;
-  }
-
-  output {
-    display: block;
-    margin-top: 0.4rem;
+  .result p {
+    margin: 0;
     white-space: pre-wrap;
   }
 
-  .err-text {
-    margin: 0.4rem 0 0;
-    color: #c66;
+  .status {
+    margin: 0;
     font-size: 0.75rem;
+    opacity: 0.7;
+    word-break: break-word;
+  }
+
+  .status.error {
+    color: #e57373;
+    opacity: 1;
   }
 </style>

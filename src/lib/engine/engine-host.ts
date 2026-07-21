@@ -5,6 +5,15 @@ import { isUiToEngineMessage } from '@/lib/messaging/protocol';
 const queue = new TranslationQueue();
 
 /**
+ * Returns the directory URL where the bundled ONNX Runtime WASM binaries are
+ * served. `runtime.getURL` only accepts typed file paths, so the URL is
+ * derived from one of the known files and trimmed to its directory.
+ */
+export function getDefaultWasmBaseUrl(): string {
+  return browser.runtime.getURL('/ort/ort-wasm-simd-threaded.wasm').replace(/[^/]+$/, '');
+}
+
+/**
  * Registers the engine message listener. Must run inside the engine host
  * context (the offscreen document on Chromium; the background page on Firefox).
  */

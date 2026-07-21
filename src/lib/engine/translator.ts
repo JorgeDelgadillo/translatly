@@ -1,4 +1,5 @@
 import { env, pipeline, type TranslationPipeline } from '@huggingface/transformers';
+import { getPair, pairKey } from './registry';
 
 export interface ModelDownloadProgress {
   status: string;
@@ -12,15 +13,16 @@ export interface ModelDownloadProgress {
 export interface TranslateOptions {
   /** Base URL (with trailing slash) where the bundled ORT .wasm binaries live. */
   wasmBaseUrl: string;
-  /** Cancels the in-flight inference (and queued model load) when aborted. */
+  /** Cancels the in-flight inference when aborted. */
   signal?: AbortSignal;
   onProgress?: (progress: ModelDownloadProgress) => void;
 }
 
-// Proof-of-concept model: single fixed pair, downloaded on first use.
-const MODEL_ID = 'Xenova/opus-mt-en-es';
-
-let translatorPromise: Promise<TranslationPipeline> | null = null;
+// Only one model is kept in memory at a time to stay within the memory
+// budget of low-VRAM / integrated-GPU machines. When a different pair is
+// requested, the previous model is disposed before the new one loads.
+const MAX_MODELS_IN_MEMORY = 1;
+const cache = new Map<string, TranslationPipeline>();
 
 function configureEnvironment(wasmBaseUrl: string): void {
   // Models come from the Hugging Face hub; nothing else may be loaded.
@@ -36,18 +38,46 @@ function configureEnvironment(wasmBaseUrl: string): void {
   wasm.numThreads = 1;
 }
 
-function getTranslator(options: TranslateOptions): Promise<TranslationPipeline> {
+async function getTranslator(
+  key: string,
+  modelId: string,
+  options: TranslateOptions,
+): Promise<TranslationPipeline> {
   configureEnvironment(options.wasmBaseUrl);
-  translatorPromise ??= pipeline('translation', MODEL_ID, {
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  if (cache.size >= MAX_MODELS_IN_MEMORY) {
+    const oldest = cache.entries().next().value as [string, TranslationPipeline] | undefined;
+    if (oldest) {
+      cache.delete(oldest[0]);
+      try {
+        (oldest[1] as unknown as { dispose?: () => void }).dispose?.();
+      } catch {
+        // Disposal is best-effort; rely on GC if the runtime has no dispose hook.
+      }
+    }
+  }
+
+  const pipe = await pipeline('translation', modelId, {
     dtype: 'q8',
     progress_callback: (progress) => options.onProgress?.(progress as ModelDownloadProgress),
   });
-  return translatorPromise;
+  cache.set(key, pipe);
+  return pipe;
 }
 
-/** Translates text with the proof-of-concept OPUS-MT model (en -> es). */
-export async function translate(text: string, options: TranslateOptions): Promise<string> {
-  const translator = await getTranslator(options);
+/** Translates text with the OPUS-MT model registered for the given pair. */
+export async function translate(
+  text: string,
+  srcLang: string,
+  tgtLang: string,
+  options: TranslateOptions,
+): Promise<string> {
+  const entry = getPair(srcLang, tgtLang);
+  if (!entry) throw new Error(`Unsupported language pair: ${srcLang} -> ${tgtLang}`);
+
+  const translator = await getTranslator(pairKey(srcLang, tgtLang), entry.modelId, options);
   const callOptions = options.signal ? { signal: options.signal } : undefined;
   const [result] = await translator(text, callOptions as never);
   return result.translation_text;

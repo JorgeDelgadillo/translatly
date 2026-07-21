@@ -69,7 +69,9 @@ pnpm copy-ort-wasm            # copy ORT .wasm binaries into public/ort (runs on
   race with the offscreen document's load.
 - **Model strategy (hybrid)**: per-pair OPUS-MT models (quantized int8, ~110 MB
   per direction) downloaded on demand by default; optional NLLB-200-distilled-600M
-  (~900 MB) as fallback for uncovered pairs. Only one model kept in memory (LRU).
+  (~900 MB) as fallback for uncovered pairs. Only one model kept in memory (LRU
+  cache, size 1, with `dispose()` on eviction). Curated pair registry lives in
+  `src/lib/engine/registry.ts` and is expanded by the model manager in phase 7.
 - **Content script UI**: Shadow DOM to isolate from page CSS.
 - **Privacy**: no remote code; models are data fetched from Hugging Face CDN.
   Host permissions stay minimal (`huggingface.co` only).
@@ -81,7 +83,7 @@ pnpm copy-ort-wasm            # copy ORT .wasm binaries into public/ort (runs on
 1. ✅ Scaffold WXT + Svelte
 2. ✅ Translation engine PoC (OPUS-MT en→es, WASM, download progress)
 3. ✅ Typed messaging + translation queue with cancellation
-4. Popup MVP (quick translation with default languages)
+4. ✅ Popup MVP (quick translation with default languages)
 5. Selection bubble (Shadow DOM) + context menu
 6. Full translator page + history + settings + default languages
 7. Model manager + NLLB fallback + language auto-detection

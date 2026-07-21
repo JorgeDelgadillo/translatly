@@ -16,7 +16,9 @@ export default defineConfig({
       description,
       // The offscreen API only exists on Chromium. Firefox MV2 runs the
       // engine in the persistent background page instead.
-      permissions: browser === 'firefox' ? [] : ['offscreen'],
+      // `storage` holds the user's default language pair.
+      permissions:
+        browser === 'firefox' ? ['storage'] : ['offscreen', 'storage'],
       // Models are downloaded on demand from the Hugging Face CDN. This is
       // the only remote origin the extension ever talks to.
       host_permissions: ['https://huggingface.co/*'],
