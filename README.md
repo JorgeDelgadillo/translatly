@@ -21,6 +21,7 @@ your browser — no servers, no tracking, no data leaving your device.
 
 ```sh
 pnpm install          # install dependencies
+pnpm run setup:extension # copy local ORT WASM and generate WXT types
 pnpm dev              # dev mode with HMR (Chrome)
 pnpm dev:firefox      # dev mode with HMR (Firefox)
 pnpm build            # production build (Chrome MV3) -> .output/chrome-mv3

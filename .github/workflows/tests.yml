@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare extension assets and types
+        run: pnpm run setup:extension
+
       - name: Check the project
         run: pnpm check
 
@@ -63,6 +66,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Prepare extension assets and types
+        run: pnpm run setup:extension
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium

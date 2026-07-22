@@ -29,8 +29,14 @@ pnpm dev / pnpm dev:firefox   # watch mode per browser
 pnpm build / pnpm build:firefox
 pnpm zip / pnpm zip:firefox   # store packages
 pnpm check                    # svelte-check type checking
-pnpm copy-ort-wasm            # copy ORT .wasm binaries into public/ort (runs on postinstall)
+pnpm run setup:extension      # copy ORT WASM binaries and generate WXT types
+pnpm run copy-ort-wasm        # copy ORT WASM binaries into public/ort only
 ```
+
+Installing dependencies does not run project lifecycle scripts. Run
+`pnpm run setup:extension` explicitly when the generated extension assets or WXT
+types are needed; the development, build, package, and check commands invoke it
+automatically.
 
 ## Conventions (must follow)
 
