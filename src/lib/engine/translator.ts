@@ -60,7 +60,13 @@ async function getTranslator(
   }
 
   const pipe = await pipeline('translation', modelId, {
-    dtype: 'q8',
+    dtype: 'int8',
+    // The OPUS-MT merged decoder trips an ORT 1.26-dev graph optimizer bug:
+    // the `DQ -> MatMul` -> `MatMulNBits` fusion (extended level) aborts with
+    // "Missing required scale" for the shared embedding. Pinning the level to
+    // 'basic' skips that fusion while keeping the cheap optimizations.
+    // Verified locally against the real model files with onnxruntime-web.
+    session_options: { graphOptimizationLevel: 'basic' },
     progress_callback: (progress) => options.onProgress?.(progress as ModelDownloadProgress),
   });
   cache.set(key, pipe);
