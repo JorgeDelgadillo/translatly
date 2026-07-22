@@ -1,8 +1,10 @@
 import { browser } from 'wxt/browser';
 import { TranslationQueue } from './queue';
-import { isUiToEngineMessage } from '@/lib/messaging/protocol';
+import { isUiToEngineMessage, type EngineBroadcast } from '@/lib/messaging/protocol';
 
-const queue = new TranslationQueue();
+export interface EngineHostOptions {
+  onBroadcast?: (message: EngineBroadcast) => void;
+}
 
 /**
  * Returns the directory URL where the bundled ONNX Runtime WASM binaries are
@@ -17,7 +19,9 @@ export function getDefaultWasmBaseUrl(): string {
  * Registers the engine message listener. Must run inside the engine host
  * context (the offscreen document on Chromium; the background page on Firefox).
  */
-export function startEngineHost(): void {
+export function startEngineHost(options: EngineHostOptions = {}): void {
+  const queue = new TranslationQueue(options.onBroadcast);
+
   browser.runtime.onMessage.addListener((msg: unknown) => {
     if (!isUiToEngineMessage(msg)) return undefined;
     switch (msg.type) {

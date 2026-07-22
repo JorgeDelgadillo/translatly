@@ -7,6 +7,12 @@ import type {
   TranslateRequestMessage,
 } from '@/lib/messaging/protocol';
 
+export type BroadcastHandler = (message: EngineBroadcast) => void;
+
+const defaultBroadcast: BroadcastHandler = (message) => {
+  void browser.runtime.sendMessage(message).catch(() => {});
+};
+
 interface Job {
   requestId: string;
   text: string;
@@ -25,6 +31,8 @@ export class TranslationQueue {
   private readonly active = new Map<string, AbortController>();
   private readonly pending: Job[] = [];
   private pumping = false;
+
+  constructor(private readonly emit: BroadcastHandler = defaultBroadcast) {}
 
   enqueue(req: TranslateRequestMessage): { position: number } {
     const controller = new AbortController();
@@ -104,7 +112,7 @@ export class TranslationQueue {
   }
 
   private broadcast(msg: EngineBroadcast): void {
-    void browser.runtime.sendMessage(msg).catch(() => {});
+    this.emit(msg);
   }
 
   private broadcastProgress(requestId: string, progress: ModelDownloadProgress): void {

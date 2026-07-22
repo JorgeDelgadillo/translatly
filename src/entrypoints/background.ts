@@ -1,6 +1,11 @@
 import { browser } from 'wxt/browser';
 import { startEngineHost } from '@/lib/engine/engine-host';
-import { isEngineInternalMessage, isUiToEngineMessage } from '@/lib/messaging/protocol';
+import {
+  isEngineBroadcast,
+  isEngineInternalMessage,
+  isUiToEngineMessage,
+  type EngineBroadcast,
+} from '@/lib/messaging/protocol';
 
 const supportsOffscreen = (): boolean => typeof browser.offscreen !== 'undefined';
 
@@ -42,30 +47,68 @@ function whenEngineReady(): Promise<void> {
   return engineReadyPromise;
 }
 
+/**
+ * Delivers engine lifecycle messages to content scripts. Runtime messages
+ * reach extension pages (popup/background/offscreen), but content scripts
+ * must be addressed through their tab.
+ */
+function forwardToContentScripts(message: EngineBroadcast): void {
+  void browser.tabs
+    .query({})
+    .then((tabs) =>
+      Promise.all(
+        tabs.map((tab) => {
+          if (tab.id == null) return undefined;
+          return browser.tabs.sendMessage(tab.id, message).catch(() => undefined);
+        }),
+      ),
+    )
+    .catch(() => {});
+}
+
+/**
+ * Firefox hosts the engine in this background page, so it cannot rely on
+ * receiving its own runtime broadcast to perform the tab forwarding.
+ */
+function publishFirefoxBroadcast(message: EngineBroadcast): void {
+  void browser.runtime.sendMessage(message).catch(() => {});
+  forwardToContentScripts(message);
+}
+
 export default defineBackground(() => {
+  console.log('[Translatly] Background script loaded');
+
   // Create context menu for translating selected text
   browser.contextMenus.create({
     id: 'translate-selection',
     title: 'Translate with Translatly',
     contexts: ['selection'],
   });
+  console.log('[Translatly] Context menu created');
 
   // Handle context menu clicks
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
+    console.log('[Translatly] Context menu clicked:', info.menuItemId, 'tab:', tab?.id);
     if (info.menuItemId === 'translate-selection' && tab?.id) {
       // Send message to content script to trigger translation
       try {
+        console.log('[Translatly] Sending translate-selection message to tab', tab.id);
         await browser.tabs.sendMessage(tab.id, { type: 'translate-selection' });
+        console.log('[Translatly] Message sent successfully');
       } catch (error) {
-        console.error('Failed to send message to content script:', error);
+        console.error('[Translatly] Failed to send message to content script:', error);
       }
     }
   });
 
   if (supportsOffscreen()) {
     // Chromium MV3: relay UI messages to the offscreen engine host. Results
-    // come back as engine broadcasts; no sendResponse is needed.
+    // come back as engine broadcasts and are forwarded to content scripts.
     browser.runtime.onMessage.addListener(async (msg: unknown) => {
+      if (isEngineBroadcast(msg)) {
+        forwardToContentScripts(msg);
+        return undefined;
+      }
       if (!isUiToEngineMessage(msg)) return undefined;
       await ensureOffscreenDocument();
       await whenEngineReady();
@@ -74,7 +117,7 @@ export default defineBackground(() => {
     });
   } else {
     // Firefox MV2 has no offscreen API: the persistent background page hosts
-    // the engine itself and answers translation requests directly.
-    startEngineHost();
+    // the engine itself and publishes results to extension pages and tabs.
+    startEngineHost({ onBroadcast: publishFirefoxBroadcast });
   }
 });

@@ -20,16 +20,24 @@
   let copied = $state(false);
 
   $effect(() => {
+    console.log('[Translatly Bubble] Setting up message listener');
     const listener = (msg: unknown) => {
+      console.log('[Translatly Bubble] Message received:', msg);
       if (!isEngineBroadcast(msg)) return;
-      if (msg.requestId !== requestId) return;
+      if (msg.requestId !== requestId) {
+        console.log('[Translatly Bubble] Ignoring message for different requestId');
+        return;
+      }
 
+      console.log('[Translatly Bubble] Processing message:', msg.type);
       switch (msg.type) {
         case 'translate:result':
+          console.log('[Translatly Bubble] Translation result:', msg.translation);
           status = 'done';
           translation = msg.translation;
           break;
         case 'translate:error':
+          console.log('[Translatly Bubble] Translation error:', msg.error);
           status = 'error';
           errorMessage = msg.error;
           break;
@@ -91,7 +99,7 @@
 
 <style>
   .bubble {
-    position: fixed;
+    position: relative;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -100,7 +108,6 @@
     min-width: 200px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
-    z-index: 2147483647;
   }
 
   .header {
