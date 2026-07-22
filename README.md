@@ -38,6 +38,10 @@ The first e2e run may require the Playwright browser binary:
 pnpm exec playwright install chromium
 ```
 
+Release packages are generated only by GitHub Actions when a GitHub release is
+published. See the [manual installation guide](docs/INSTALL.md) for Chrome and
+Firefox.
+
 After `pnpm dev`, load the extension from `.output/chrome-mv3` (or let WXT open the
 browser automatically).
 
