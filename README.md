@@ -42,6 +42,10 @@ Release packages are generated only by GitHub Actions when a GitHub release is
 published. See the [manual installation guide](docs/INSTALL.md) for Chrome and
 Firefox.
 
+The test workflow runs `pnpm check`, unit tests, and Playwright e2e tests on
+every commit pushed to `main` and on pull requests targeting `main`. It does not
+generate release packages.
+
 After `pnpm dev`, load the extension from `.output/chrome-mv3` (or let WXT open the
 browser automatically).
 
