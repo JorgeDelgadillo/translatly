@@ -29,6 +29,10 @@ export default defineConfig({
       host_permissions: ['https://huggingface.co/*', '<all_urls>'],
       content_security_policy:
         manifestVersion === 2 ? csp : { extension_pages: csp },
+      // The full translator is also the browser's new-tab surface.
+      chrome_url_overrides: {
+        newtab: 'translator.html',
+      },
     };
   },
 });

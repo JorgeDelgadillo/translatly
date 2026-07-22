@@ -81,6 +81,14 @@ export interface EngineReadyMessage {
 
 export type EngineInternalMessage = EngineReadyMessage;
 
+/** UI surface -> background: open the full translator with optional context. */
+export interface OpenTranslatorMessage {
+  type: 'translator:open';
+  text?: string;
+  source?: string;
+  target?: string;
+}
+
 // ---- Type guards ---------------------------------------------------------
 
 export function isUiToEngineMessage(msg: unknown): msg is UiToEngineMessage {
@@ -102,4 +110,8 @@ export function isEngineBroadcast(msg: unknown): msg is EngineBroadcast {
 
 export function isEngineInternalMessage(msg: unknown): msg is EngineInternalMessage {
   return typeof msg === 'object' && msg !== null && (msg as { type?: unknown }).type === 'engine:ready';
+}
+
+export function isOpenTranslatorMessage(msg: unknown): msg is OpenTranslatorMessage {
+  return typeof msg === 'object' && msg !== null && (msg as { type?: unknown }).type === 'translator:open';
 }

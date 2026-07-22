@@ -4,11 +4,11 @@ Private, fully local translation extension for Chromium-based browsers and Firef
 Translates any language to any language using small neural models that run 100% in
 your browser — no servers, no tracking, no data leaving your device.
 
-## Features (planned)
+## Features
 
 - **Selection translation**: translate selected text on any page via a floating bubble.
 - **Quick translations**: popup with instant translation between your default languages.
-- **Full translator**: full-page tab with history, settings, and a model manager.
+- **Full translator**: local new-tab workspace with history, settings, and default language controls.
 - Small local models (ONNX, quantized) designed to work on machines with integrated
   GPUs and low VRAM. WASM by default, WebGPU as opt-in acceleration.
 
@@ -39,9 +39,11 @@ browser automatically).
 src/
 ├─ entrypoints/        # extension entrypoints (background, content, popup, ...)
 │  ├─ background.ts    # coordinator: queue, context menus, messaging
-│  ├─ content.ts       # selection translation bubble (Shadow DOM)
-│  └─ popup/           # quick-translate popup (Svelte)
-└─ assets/             # static assets imported by code
+│  ├─ content/         # selection translation bubble (Shadow DOM)
+│  ├─ popup/           # quick-translate popup (Svelte)
+│  ├─ translator/      # full-page translation desk (Svelte)
+│  └─ offscreen/       # Chromium engine host
+└─ lib/                # engine, messaging, settings, and local history
 public/
 └─ icon/               # extension icons (placeholders for now)
 ```
@@ -56,4 +58,4 @@ public/
 
 All inference runs locally. The only network traffic is downloading translation
 models (from Hugging Face) on demand, and only when the user requests a new
-language pair.
+language pair. Translation history stays in local extension storage and is never synced.

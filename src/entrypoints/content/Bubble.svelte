@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from 'wxt/browser';
   import type { EngineBroadcast } from '@/lib/messaging/protocol';
+  import { openTranslatorPage } from '@/lib/messaging/navigation';
 
   type Status = 'idle' | 'translating' | 'done' | 'error';
 
@@ -60,8 +61,7 @@
   }
 
   function openFullPage() {
-    // TODO: implement in phase 6
-    console.log('Open full page (not implemented yet)');
+    openTranslatorPage({ text, source, target });
   }
 
   function isEngineBroadcast(msg: unknown): msg is EngineBroadcast {

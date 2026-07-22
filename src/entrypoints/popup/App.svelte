@@ -7,6 +7,7 @@
   } from '@/lib/messaging/translate';
   import { LANGUAGES, getPair, supportedTargets, languageName } from '@/lib/engine/registry';
   import { loadDefaultLanguages, saveDefaultLanguages } from '@/lib/settings';
+  import { openTranslatorPage } from '@/lib/messaging/navigation';
 
   type Status =
     | { kind: 'idle' }
@@ -121,6 +122,10 @@
       status = { kind: 'error', text: 'Could not copy to clipboard' };
     }
   }
+
+  function openFullTranslator() {
+    openTranslatorPage({ text, source, target });
+  }
 </script>
 
 <main>
@@ -174,6 +179,7 @@
     {#if busy}
       <button onclick={cancel}>Cancel</button>
     {/if}
+    <button class="secondary" onclick={openFullTranslator}>Open full translator</button>
   </div>
 
   {#if result && resultPair}
@@ -294,6 +300,16 @@
   button.primary:disabled {
     background: #555;
     border-color: #555;
+  }
+
+  button.secondary {
+    margin-left: auto;
+    border-color: #2a6fdb;
+    color: #2a6fdb;
+  }
+
+  button.secondary:hover {
+    background: rgba(42, 111, 219, 0.1);
   }
 
   button.small {

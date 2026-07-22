@@ -3,8 +3,10 @@ import { startEngineHost } from '@/lib/engine/engine-host';
 import {
   isEngineBroadcast,
   isEngineInternalMessage,
+  isOpenTranslatorMessage,
   isUiToEngineMessage,
   type EngineBroadcast,
+  type OpenTranslatorMessage,
 } from '@/lib/messaging/protocol';
 
 const supportsOffscreen = (): boolean => typeof browser.offscreen !== 'undefined';
@@ -75,6 +77,16 @@ function publishFirefoxBroadcast(message: EngineBroadcast): void {
   forwardToContentScripts(message);
 }
 
+function openTranslatorPage(message: OpenTranslatorMessage): void {
+  const params = new URLSearchParams();
+  if (message.text) params.set('text', message.text);
+  if (message.source) params.set('source', message.source);
+  if (message.target) params.set('target', message.target);
+  const query = params.toString();
+  const url = `${browser.runtime.getURL('/translator.html')}${query ? `?${query}` : ''}`;
+  void browser.tabs.create({ url }).catch(() => {});
+}
+
 export default defineBackground(() => {
   console.log('[Translatly] Background script loaded');
 
@@ -99,6 +111,12 @@ export default defineBackground(() => {
         console.error('[Translatly] Failed to send message to content script:', error);
       }
     }
+  });
+
+  browser.runtime.onMessage.addListener((msg: unknown) => {
+    if (!isOpenTranslatorMessage(msg)) return undefined;
+    openTranslatorPage(msg);
+    return undefined;
   });
 
   if (supportsOffscreen()) {
