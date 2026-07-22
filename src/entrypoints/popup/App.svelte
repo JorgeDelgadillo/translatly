@@ -5,8 +5,10 @@
     sendTranslateCancel,
     onEngineBroadcast,
   } from '@/lib/messaging/translate';
-  import { LANGUAGES, getTranslationRoute, supportedTargets, languageName } from '@/lib/engine/registry';
-  import { loadDefaultLanguages, saveDefaultLanguages } from '@/lib/settings';
+  import { LANGUAGES, getTranslationRoute, supportedTargets } from '@/lib/engine/registry';
+  import { loadPreferences, savePreferences, type Locale, type ThemePreference } from '@/lib/settings';
+  import { languageLabel, translate, type MessageKey } from '@/lib/i18n';
+  import { applyDocumentPreferences } from '@/lib/theme';
   import { openTranslatorPage } from '@/lib/messaging/navigation';
 
   type Status =
@@ -17,6 +19,8 @@
   let loaded = $state(false);
   let source = $state('en');
   let target = $state('es');
+  let locale = $state<Locale>('en');
+  let theme = $state<ThemePreference>('system');
   let text = $state('Hello, how are you?');
   let result = $state('');
   let resultPair = $state<{ source: string; target: string } | null>(null);
@@ -27,10 +31,24 @@
 
   const availableTargets = $derived(supportedTargets(source));
 
+  function tx(key: MessageKey, values: Record<string, string | number> = {}): string {
+    return translate(key, locale, values);
+  }
+
+  function localizedLanguageName(code: string): string {
+    return languageLabel(code, locale);
+  }
+
+  $effect(() => {
+    applyDocumentPreferences(locale, theme);
+  });
+
   onMount(async () => {
-    const defaults = await loadDefaultLanguages();
-    source = defaults.source;
-    target = defaults.target;
+    const preferences = await loadPreferences();
+    source = preferences.source;
+    target = preferences.target;
+    locale = preferences.locale;
+    theme = preferences.theme;
     loaded = true;
   });
 
@@ -41,7 +59,7 @@
       target = availableTargets[0]!;
       return; // re-run after target is corrected, then persist
     }
-    void saveDefaultLanguages({ source, target });
+    void savePreferences({ source, target, locale, theme });
   });
 
   // Subscribe to engine broadcasts and correlate with the active request.
@@ -50,15 +68,15 @@
       if (currentRequestId == null || msg.requestId !== currentRequestId) return;
       switch (msg.type) {
         case 'translate:queued':
-          status = { kind: 'busy', text: `Queued · position ${msg.position}` };
+          status = { kind: 'busy', text: tx('queued', { position: msg.position }) };
           break;
         case 'translate:progress':
           status = {
             kind: 'busy',
             text:
               msg.progress != null
-                ? `Loading model · ${msg.progress.toFixed(0)}%`
-                : `Loading model · ${msg.status}`,
+                ? tx('loadingModelProgress', { progress: msg.progress.toFixed(0) })
+                : tx('loadingModel', { status: msg.status }),
           };
           break;
         case 'translate:result':
@@ -72,7 +90,7 @@
         case 'translate:error':
           status = {
             kind: 'error',
-            text: msg.cancelled ? 'Cancelled' : msg.error || 'Translation failed',
+            text: msg.cancelled ? tx('cancelled') : msg.error || tx('translationFailed'),
           };
           busy = false;
           currentRequestId = null;
@@ -85,7 +103,10 @@
   function runTranslate() {
     if (busy || !text.trim() || !source || !target) return;
     if (!getTranslationRoute(source, target)) {
-      status = { kind: 'error', text: `No model for ${languageName(source)} → ${languageName(target)}` };
+      status = {
+        kind: 'error',
+        text: tx('noModel', { source: localizedLanguageName(source), target: localizedLanguageName(target) }),
+      };
       return;
     }
     result = '';
@@ -94,13 +115,13 @@
     const id = sendTranslateRequest(text, source, target);
     currentRequestId = id;
     busy = true;
-    status = { kind: 'busy', text: 'Translating…' };
+    status = { kind: 'busy', text: tx('translating') };
   }
 
   function cancel() {
     if (currentRequestId) {
       sendTranslateCancel(currentRequestId);
-      status = { kind: 'busy', text: 'Cancelling…' };
+      status = { kind: 'busy', text: tx('cancelling') };
     }
   }
 
@@ -119,7 +140,7 @@
       copied = true;
       setTimeout(() => (copied = false), 1500);
     } catch {
-      status = { kind: 'error', text: 'Could not copy to clipboard' };
+      status = { kind: 'error', text: tx('couldNotCopy') };
     }
   }
 
@@ -128,41 +149,42 @@
   }
 </script>
 
-<main>
+<main aria-labelledby="popup-title">
   <header>
-    <h1>Translatly</h1>
+    <h1 id="popup-title">Translatly</h1>
   </header>
 
   <div class="pickers">
     <label>
-      <span>From</span>
+      <span>{tx('from')}</span>
       <select bind:value={source}>
         {#each LANGUAGES as lang (lang.code)}
-          <option value={lang.code}>{lang.name}</option>
+          <option value={lang.code}>{localizedLanguageName(lang.code)}</option>
         {/each}
       </select>
     </label>
 
-    <button class="swap" onclick={swap} disabled={busy} title="Swap languages" aria-label="Swap languages">
+    <button class="swap" onclick={swap} disabled={busy} title={tx('swapLanguages')} aria-label={tx('swapLanguages')}>
       ⇄
     </button>
 
     <label>
-      <span>To</span>
+      <span>{tx('to')}</span>
       <select bind:value={target} disabled={availableTargets.length === 0}>
         {#each availableTargets as code (code)}
-          <option value={code}>{languageName(code)}</option>
+          <option value={code}>{localizedLanguageName(code)}</option>
         {/each}
       </select>
     </label>
   </div>
 
   <label class="field">
-    <span>{languageName(source)}</span>
+    <span>{localizedLanguageName(source)}</span>
     <textarea
       bind:value={text}
       rows="3"
-      placeholder="Text to translate…"
+      aria-label={tx('textToTranslate')}
+      placeholder={tx('textPlaceholder')}
       onkeydown={(e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
           e.preventDefault();
@@ -174,26 +196,26 @@
 
   <div class="actions">
     <button class="primary" onclick={runTranslate} disabled={busy || !text.trim()}>
-      {busy ? 'Working…' : 'Translate'}
+      {busy ? tx('working') : tx('translate')}
     </button>
     {#if busy}
-      <button onclick={cancel}>Cancel</button>
+      <button onclick={cancel}>{tx('cancel')}</button>
     {/if}
-    <button class="secondary" onclick={openFullTranslator}>Open full translator</button>
+    <button class="secondary" onclick={openFullTranslator}>{tx('openFullTranslator')}</button>
   </div>
 
   {#if result && resultPair}
     <section class="result" aria-live="polite">
       <div class="result-head">
-        <span class="pair">{languageName(resultPair.source)} → {languageName(resultPair.target)}</span>
-        <button class="small" onclick={copyResult}>{copied ? 'Copied' : 'Copy'}</button>
+        <span class="pair">{localizedLanguageName(resultPair.source)} → {localizedLanguageName(resultPair.target)}</span>
+        <button class="small" onclick={copyResult}>{copied ? tx('copied') : tx('copy')}</button>
       </div>
       <p>{result}</p>
     </section>
   {/if}
 
   {#if status.kind !== 'idle'}
-    <p class="status" class:error={status.kind === 'error'} aria-live="polite">
+    <p class="status" class:error={status.kind === 'error'} aria-live="polite" role={status.kind === 'error' ? 'alert' : 'status'}>
       {status.text}
     </p>
   {/if}

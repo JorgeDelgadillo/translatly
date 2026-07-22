@@ -1,12 +1,20 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { MODEL_REGISTRY, languageName, type ModelDescriptor } from '@/lib/engine/registry';
+  import { MODEL_REGISTRY, type ModelDescriptor } from '@/lib/engine/registry';
+  import { languageLabel, translate, type MessageKey } from '@/lib/i18n';
+  import type { Locale } from '@/lib/settings';
   import {
     onModelBroadcast,
     requestModelDelete,
     requestModelDownload,
     requestModelStatus,
   } from '@/lib/messaging/models';
+
+  interface Props {
+    locale: Locale;
+  }
+
+  let { locale }: Props = $props();
 
   type ModelState =
     | { status: 'checking' }
@@ -28,6 +36,10 @@
   const readyCount = $derived(
     MODEL_REGISTRY.filter((model) => states[model.modelId]?.status === 'ready').length,
   );
+
+  function tx(key: MessageKey, values: Record<string, string | number> = {}): string {
+    return translate(key, locale, values);
+  }
 
   onMount(() => {
     const off = onModelBroadcast((message) => {
@@ -82,12 +94,12 @@
   function download(model: ModelDescriptor): void {
     if (activeModelId) return;
     activeModelId = model.modelId;
-    states[model.modelId] = { status: 'downloading', text: 'Starting download…' };
+    states[model.modelId] = { status: 'downloading', text: tx('startingDownload') };
     requestModelDownload(model.modelId);
   }
 
   function remove(model: ModelDescriptor): void {
-    if (activeModelId || !window.confirm('Remove ' + model.label + ' from this device?')) return;
+    if (activeModelId || !window.confirm(tx('removeModelConfirm', { model: modelLabel(model) }))) return;
     activeModelId = model.modelId;
     states[model.modelId] = { status: 'deleting' };
     requestModelDelete(model.modelId);
@@ -99,20 +111,25 @@
   }
 
   function languageSummary(model: ModelDescriptor): string {
-    if (model.kind === 'nllb') return 'English · Spanish · French · German · Italian · Portuguese';
-    return model.languageCodes.map(languageName).join(' · ');
+    return model.languageCodes.map((code) => languageLabel(code, locale)).join(' · ');
+  }
+
+  function modelLabel(model: ModelDescriptor): string {
+    return model.kind === 'nllb'
+      ? tx('universalFallback')
+      : model.languageCodes.map((code) => languageLabel(code, locale)).join(' → ');
   }
 
   function stateLabel(state: ModelState | undefined): string {
-    if (!state || state.status === 'checking') return 'Checking cache…';
-    if (state.status === 'ready') return 'Ready on this device';
-    if (state.status === 'not-installed') return 'Not downloaded';
+    if (!state || state.status === 'checking') return tx('checkingCache');
+    if (state.status === 'ready') return tx('readyOnDevice');
+    if (state.status === 'not-installed') return tx('notDownloaded');
     if (state.status === 'downloading') {
       return state.progress == null
         ? state.text
         : state.progress.toFixed(0) + '% · ' + state.text;
     }
-    if (state.status === 'deleting') return 'Removing local files…';
+    if (state.status === 'deleting') return tx('removingFiles');
     return state.text;
   }
 </script>
@@ -120,18 +137,17 @@
 <section class="models-panel" aria-labelledby="models-title">
   <div class="models-heading">
     <div>
-      <p class="eyebrow">Local storage / 06</p>
-      <h2 id="models-title">Model manager</h2>
+      <p class="eyebrow">{tx('localStorageEyebrow')}</p>
+      <h2 id="models-title">{tx('modelManager')}</h2>
     </div>
     <div class="storage-summary">
       <strong>{formatBytes(storedBytes)}</strong>
-      <span>estimated · {readyCount}/{MODEL_REGISTRY.length} ready</span>
+      <span>{tx('storageSummary', { size: formatBytes(storedBytes), ready: readyCount, total: MODEL_REGISTRY.length })}</span>
     </div>
   </div>
 
   <p class="models-intro">
-    Download pair models for the smallest footprint, or keep the universal NLLB fallback for any
-    language combination in the desk.
+    {tx('modelIntro')}
   </p>
 
   <div class="model-list">
@@ -140,17 +156,17 @@
       <article class="model-row">
         <div class="model-copy">
           <div class="model-title-line">
-            <h3>{model.label}</h3>
+            <h3>{modelLabel(model)}</h3>
             <span class:universal={model.kind === 'nllb'} class="model-kind">
-              {model.kind === 'nllb' ? 'Fallback' : 'Pair model'}
+              {model.kind === 'nllb' ? tx('fallback') : tx('pairModel')}
             </span>
           </div>
-          <p>{model.description}</p>
+          <p>{model.kind === 'nllb' ? tx('universalDescription') : tx('fastCompact')}</p>
           <span class="model-languages">{languageSummary(model)} · ~{formatBytes(model.estimatedBytes)}</span>
           {#if state?.status === 'downloading' && state.progress != null}
             <div
               class="progress-track"
-              aria-label={'Downloading ' + model.label}
+              aria-label={tx('downloading', { model: modelLabel(model) })}
               role="progressbar"
               aria-valuemin="0"
               aria-valuemax="100"
@@ -161,10 +177,10 @@
           {/if}
         </div>
         <div class="model-action">
-          <span class:error={state?.status === 'error'} class="model-status">{stateLabel(state)}</span>
+          <span class:error={state?.status === 'error'} class="model-status" aria-live="polite">{stateLabel(state)}</span>
           {#if state?.status === 'ready'}
             <button class="model-button remove" onclick={() => remove(model)} disabled={activeModelId !== null}>
-              Remove
+              {tx('remove')}
             </button>
           {:else}
             <button
@@ -172,7 +188,7 @@
               onclick={() => download(model)}
               disabled={!state || activeModelId !== null || state.status === 'checking' || state.status === 'downloading' || state.status === 'deleting'}
             >
-              Download
+              {tx('download')}
             </button>
           {/if}
         </div>
@@ -389,6 +405,88 @@
 
     .model-action {
       min-width: 0;
+    }
+  }
+
+  :global(html[data-theme='dark']) .models-panel {
+    border-color: rgba(244, 240, 232, 0.2);
+    background: #182733;
+    color: #f4f0e8;
+  }
+
+  :global(html[data-theme='dark']) .models-panel h2,
+  :global(html[data-theme='dark']) .models-panel h3,
+  :global(html[data-theme='dark']) .storage-summary strong {
+    color: #f4f0e8;
+  }
+
+  :global(html[data-theme='dark']) .models-panel .model-list,
+  :global(html[data-theme='dark']) .models-panel .model-row {
+    border-color: rgba(244, 240, 232, 0.18);
+  }
+
+  :global(html[data-theme='dark']) .models-panel .models-intro,
+  :global(html[data-theme='dark']) .models-panel .model-copy > p,
+  :global(html[data-theme='dark']) .models-panel .model-languages,
+  :global(html[data-theme='dark']) .models-panel .model-status,
+  :global(html[data-theme='dark']) .models-panel .storage-summary {
+    color: #b9c6c2;
+  }
+
+  :global(html[data-theme='dark']) .models-panel .model-kind {
+    background: #26343d;
+    color: #d8e2dc;
+  }
+
+  :global(html[data-theme='dark']) .models-panel .model-kind.universal {
+    background: #4a2d2d;
+    color: #ffb19e;
+  }
+
+  :global(html[data-theme='dark']) .models-panel .model-button.remove {
+    border-color: rgba(244, 240, 232, 0.24);
+    color: #f4f0e8;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme='system']) .models-panel {
+      border-color: rgba(244, 240, 232, 0.2);
+      background: #182733;
+      color: #f4f0e8;
+    }
+
+    :global(html[data-theme='system']) .models-panel h2,
+    :global(html[data-theme='system']) .models-panel h3,
+    :global(html[data-theme='system']) .storage-summary strong {
+      color: #f4f0e8;
+    }
+
+    :global(html[data-theme='system']) .models-panel .model-list,
+    :global(html[data-theme='system']) .models-panel .model-row {
+      border-color: rgba(244, 240, 232, 0.18);
+    }
+
+    :global(html[data-theme='system']) .models-panel .models-intro,
+    :global(html[data-theme='system']) .models-panel .model-copy > p,
+    :global(html[data-theme='system']) .models-panel .model-languages,
+    :global(html[data-theme='system']) .models-panel .model-status,
+    :global(html[data-theme='system']) .models-panel .storage-summary {
+      color: #b9c6c2;
+    }
+
+    :global(html[data-theme='system']) .models-panel .model-kind {
+      background: #26343d;
+      color: #d8e2dc;
+    }
+
+    :global(html[data-theme='system']) .models-panel .model-kind.universal {
+      background: #4a2d2d;
+      color: #ffb19e;
+    }
+
+    :global(html[data-theme='system']) .models-panel .model-button.remove {
+      border-color: rgba(244, 240, 232, 0.24);
+      color: #f4f0e8;
     }
   }
 </style>

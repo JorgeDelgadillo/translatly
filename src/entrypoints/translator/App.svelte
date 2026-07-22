@@ -11,12 +11,19 @@
   import {
     LANGUAGES,
     getTranslationRoute,
-    languageName,
     supportedTargets,
   } from '@/lib/engine/registry';
   import { AUTO_DETECT_CODE, detectLanguage } from '@/lib/engine/detection';
   import { onEngineBroadcast, sendTranslateCancel, sendTranslateRequest } from '@/lib/messaging/translate';
-  import { loadDefaultLanguages, saveDefaultLanguages } from '@/lib/settings';
+  import {
+    loadPreferences,
+    saveDefaultLanguages,
+    savePreferences,
+    type Locale,
+    type ThemePreference,
+  } from '@/lib/settings';
+  import { languageLabel, translate, type MessageKey } from '@/lib/i18n';
+  import { applyDocumentPreferences } from '@/lib/theme';
 
   type Status =
     | { kind: 'idle' }
@@ -35,6 +42,8 @@
   let loaded = $state(false);
   let source = $state('en');
   let target = $state('es');
+  let locale = $state<Locale>('en');
+  let theme = $state<ThemePreference>('system');
   let text = $state('');
   let result = $state('');
   let resultPair = $state<{ source: string; target: string } | null>(null);
@@ -47,6 +56,7 @@
   let defaultSaved = $state(false);
   let history = $state<TranslationHistoryEntry[]>([]);
   let activeRequest = $state<ActiveRequest | null>(null);
+  let onboardingDialog = $state<HTMLDialogElement | null>(null);
 
   const availableTargets = $derived(
     source === AUTO_DETECT_CODE
@@ -58,27 +68,44 @@
   const canSwap = $derived(source !== AUTO_DETECT_CODE && getTranslationRoute(target, source) !== undefined);
   const characterCount = $derived(text.length);
 
+  function tx(key: MessageKey, values: Record<string, string | number> = {}): string {
+    return translate(key, locale, values);
+  }
+
+  function localizedLanguageName(code: string): string {
+    return code === AUTO_DETECT_CODE ? tx('autoDetect') : languageLabel(code, locale);
+  }
+
+  $effect(() => {
+    applyDocumentPreferences(locale, theme);
+  });
+
   onMount(async () => {
     const params = new URLSearchParams(window.location.search);
-    const [defaults, storedHistory] = await Promise.all([
-      loadDefaultLanguages(),
+    const [preferences, storedHistory] = await Promise.all([
+      loadPreferences(),
       loadTranslationHistory(),
     ]);
 
-    const requestedSource = params.get('source') ?? defaults.source;
-    const requestedTarget = params.get('target') ?? defaults.target;
+    const requestedSource = params.get('source') ?? preferences.source;
+    const requestedTarget = params.get('target') ?? preferences.target;
     const validSource = requestedSource === AUTO_DETECT_CODE || LANGUAGES.some((language) => language.code === requestedSource)
       ? requestedSource
-      : defaults.source;
-    const validTargets = supportedTargets(validSource);
+      : preferences.source;
+    const validTargets = validSource === AUTO_DETECT_CODE
+      ? LANGUAGES.map((language) => language.code)
+      : supportedTargets(validSource);
 
     source = validSource;
-    target = validTargets.includes(requestedTarget) ? requestedTarget : (validTargets[0] ?? defaults.target);
-    settingsSource = defaults.source;
-    settingsTarget = defaults.target;
+    target = validTargets.includes(requestedTarget) ? requestedTarget : (validTargets[0] ?? preferences.target);
+    settingsSource = preferences.source;
+    settingsTarget = preferences.target;
+    locale = preferences.locale;
+    theme = preferences.theme;
     text = params.get('text') ?? '';
     history = storedHistory;
     loaded = true;
+    if (!preferences.onboardingSeen) setTimeout(openOnboarding, 0);
   });
 
   $effect(() => {
@@ -101,15 +128,15 @@
 
       switch (message.type) {
         case 'translate:queued':
-          status = { kind: 'busy', text: `Queued · position ${message.position}` };
+          status = { kind: 'busy', text: tx('queued', { position: message.position }) };
           break;
         case 'translate:progress':
           status = {
             kind: 'busy',
             text:
               message.progress != null
-                ? `Loading model · ${message.progress.toFixed(0)}%`
-                : `Loading model · ${message.status}`,
+                ? tx('loadingModelProgress', { progress: message.progress.toFixed(0) })
+                : tx('loadingModel', { status: message.status }),
           };
           break;
         case 'translate:result': {
@@ -128,7 +155,7 @@
         case 'translate:error':
           status = {
             kind: 'error',
-            text: message.cancelled ? 'Translation cancelled' : message.error || 'Translation failed',
+            text: message.cancelled ? tx('cancelled') : message.error || tx('translationFailed'),
           };
           activeRequest = null;
           break;
@@ -153,14 +180,17 @@
     if (!detectedSource) {
       status = {
         kind: 'error',
-        text: 'Add a little more text so the local detector can identify the language',
+        text: tx('detectorMoreText'),
       };
       return;
     }
     if (!getTranslationRoute(detectedSource, target)) {
       status = {
         kind: 'error',
-        text: 'No local model for ' + languageName(detectedSource) + ' → ' + languageName(target),
+        text: tx('noLocalModel', {
+          source: localizedLanguageName(detectedSource),
+          target: localizedLanguageName(target),
+        }),
       };
       return;
     }
@@ -174,15 +204,15 @@
       kind: 'busy',
       text:
         source === AUTO_DETECT_CODE
-          ? 'Detected ' + languageName(detectedSource) + ' · preparing model…'
-          : 'Preparing local model…',
+          ? tx('detectedPreparing', { language: localizedLanguageName(detectedSource) })
+          : tx('preparingModel'),
     };
   }
 
   function cancelTranslate(): void {
     if (!activeRequest) return;
     sendTranslateCancel(activeRequest.id);
-    status = { kind: 'busy', text: 'Cancelling…' };
+    status = { kind: 'busy', text: tx('cancelling') };
   }
 
   function swapLanguages(): void {
@@ -208,7 +238,7 @@
       copied = true;
       setTimeout(() => (copied = false), 1500);
     } catch {
-      status = { kind: 'error', text: 'Could not copy to clipboard' };
+      status = { kind: 'error', text: tx('couldNotCopy') };
     }
   }
 
@@ -217,6 +247,7 @@
       settingsTarget = settingsTargets[0] ?? settingsTarget;
     }
     await saveDefaultLanguages({ source: settingsSource, target: settingsTarget });
+    await savePreferences({ locale, theme });
     defaultSaved = true;
     setTimeout(() => (defaultSaved = false), 1800);
   }
@@ -237,7 +268,7 @@
   }
 
   async function removeAllHistory(): Promise<void> {
-    if (!window.confirm('Clear all local translation history?')) return;
+    if (!window.confirm(tx('clearHistoryConfirm'))) return;
     await clearTranslationHistory();
     history = [];
   }
@@ -252,17 +283,32 @@
   }
 
   function displayLanguageName(code: string): string {
-    return code === AUTO_DETECT_CODE ? 'Auto-detect' : languageName(code);
+    return localizedLanguageName(code);
+  }
+
+  function openOnboarding(): void {
+    if (onboardingDialog && !onboardingDialog.open) {
+      onboardingDialog.showModal();
+      onboardingDialog.querySelector<HTMLButtonElement>('.button-primary')?.focus();
+    }
+  }
+
+  async function completeOnboarding(): Promise<void> {
+    await savePreferences({ onboardingSeen: true });
+    onboardingDialog?.close();
+  }
+
+  async function saveAppearance(): Promise<void> {
+    await savePreferences({ locale, theme });
   }
 </script>
 
 <svelte:head>
-  <title>Translatly — Translation desk</title>
-  <meta
-    name="description"
-    content="Private, local machine translation with a persistent translation desk."
-  />
+  <title>{tx('appTitle')}</title>
+  <meta name="description" content={tx('appDescription')} />
 </svelte:head>
+
+<a class="skip-link" href="#workspace">{tx('skipToWorkspace')}</a>
 
 <div class="page-shell">
   <div class="ambient ambient-one"></div>
@@ -272,60 +318,59 @@
     <div class="brand-lockup" aria-label="Translatly home">
       <span class="brand-mark">T<span>.</span></span>
       <span class="brand-name">Translatly</span>
-      <span class="brand-note">/ local desk</span>
+      <span class="brand-note">{tx('localDesk')}</span>
     </div>
 
     <div class="topbar-actions">
-      <span class="privacy-chip"><span class="pulse-dot"></span> Inference stays here</span>
+      <span class="privacy-chip"><span class="pulse-dot" aria-hidden="true"></span> {tx('inferenceLocal')}</span>
       <button
         class:active={settingsOpen}
         class="settings-toggle"
         onclick={() => (settingsOpen = !settingsOpen)}
         aria-expanded={settingsOpen}
+        aria-controls="settings-panel"
       >
         <span class="settings-icon" aria-hidden="true">✳</span>
-        Settings
+        {tx('settings')}
       </button>
       <button
         class:active={modelsOpen}
         class="settings-toggle"
         onclick={() => (modelsOpen = !modelsOpen)}
         aria-expanded={modelsOpen}
+        aria-controls="models-panel"
       >
         <span class="settings-icon" aria-hidden="true">◒</span>
-        Models
+        {tx('models')}
       </button>
     </div>
   </header>
 
-  <main>
+  <main id="main-content">
     <section class="hero" aria-labelledby="page-title">
       <div>
-        <p class="eyebrow">Private translation / 01</p>
-        <h1 id="page-title">Find the right<br /><em>words.</em></h1>
+        <p class="eyebrow">{tx('heroEyebrow')}</p>
+        <h1 id="page-title">{tx('heroTitleLead')}<br /><em>{tx('heroTitleAccent')}</em></h1>
       </div>
-      <p class="hero-copy">
-        A quiet translation desk powered by local models. Your words stay on this device — from first
-        draft to final copy.
-      </p>
+      <p class="hero-copy">{tx('heroCopy')}</p>
     </section>
 
     {#if settingsOpen}
-      <section class="settings-panel" aria-labelledby="settings-title">
+      <section id="settings-panel" class="settings-panel" aria-labelledby="settings-title">
         <div class="settings-heading">
           <div>
-            <p class="eyebrow">Preferences / 02</p>
-            <h2 id="settings-title">Your default pair</h2>
+            <p class="eyebrow">{tx('preferencesEyebrow')}</p>
+            <h2 id="settings-title">{tx('defaultPair')}</h2>
           </div>
-          <p class="settings-note">Used by the popup and selection bubble.</p>
+          <p class="settings-note">{tx('usedByPopup')}</p>
         </div>
 
         <div class="settings-form">
           <label class="select-field">
-            <span>Translate from</span>
+            <span>{tx('translateFrom')}</span>
             <select bind:value={settingsSource}>
               {#each LANGUAGES as language (language.code)}
-                <option value={language.code}>{language.name}</option>
+                <option value={language.code}>{localizedLanguageName(language.code)}</option>
               {/each}
             </select>
           </label>
@@ -333,41 +378,96 @@
           <span class="settings-arrow" aria-hidden="true">→</span>
 
           <label class="select-field">
-            <span>Translate to</span>
+            <span>{tx('translateTo')}</span>
             <select bind:value={settingsTarget} disabled={settingsTargets.length === 0}>
               {#each settingsTargets as code (code)}
-                <option value={code}>{languageName(code)}</option>
+                <option value={code}>{localizedLanguageName(code)}</option>
               {/each}
             </select>
           </label>
 
           <button class="button button-dark" onclick={saveSettings}>
-            {defaultSaved ? 'Saved' : 'Save defaults'}
+            {defaultSaved ? tx('saved') : tx('saveDefaults')}
           </button>
+        </div>
+        <div class="appearance-form">
+          <label class="select-field">
+            <span>{tx('language')}</span>
+            <select bind:value={locale} onchange={saveAppearance}>
+              <option value="en">{tx('english')}</option>
+              <option value="es">{tx('spanish')}</option>
+            </select>
+          </label>
+          <label class="select-field">
+            <span>{tx('theme')}</span>
+            <select bind:value={theme} onchange={saveAppearance}>
+              <option value="system">{tx('themeSystem')}</option>
+              <option value="light">{tx('themeLight')}</option>
+              <option value="dark">{tx('themeDark')}</option>
+            </select>
+          </label>
         </div>
       </section>
     {/if}
 
     {#if modelsOpen}
-      <ModelManager />
+      <div id="models-panel"><ModelManager locale={locale} /></div>
     {/if}
 
-    <section class="workspace" aria-labelledby="workspace-title">
+    <dialog
+      class="onboarding-dialog"
+      bind:this={onboardingDialog}
+      aria-labelledby="onboarding-title"
+      aria-describedby="onboarding-intro"
+    >
+      <div class="onboarding-content">
+        <p class="eyebrow">{tx('localDesk')}</p>
+        <h2 id="onboarding-title">{tx('onboardingTitle')}</h2>
+        <p id="onboarding-intro" class="onboarding-intro">{tx('onboardingIntro')}</p>
+        <div class="onboarding-grid">
+          <article>
+            <span class="onboarding-number">01</span>
+            <h3>{tx('onboardingPrivacyTitle')}</h3>
+            <p>{tx('onboardingPrivacyCopy')}</p>
+          </article>
+          <article>
+            <span class="onboarding-number">02</span>
+            <h3>{tx('onboardingLanguagesTitle')}</h3>
+            <p>{tx('onboardingLanguagesCopy')}</p>
+          </article>
+          <article>
+            <span class="onboarding-number">03</span>
+            <h3>{tx('onboardingModelsTitle')}</h3>
+            <p>{tx('onboardingModelsCopy')}</p>
+          </article>
+        </div>
+        <div class="onboarding-actions">
+          <button class="text-button" type="button" onclick={() => void completeOnboarding()}>
+            {tx('onboardingSkip')}
+          </button>
+          <button class="button button-primary" type="button" onclick={() => void completeOnboarding()}>
+            {tx('onboardingStart')} <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <section id="workspace" class="workspace" aria-labelledby="workspace-title" tabindex="-1">
       <div class="workspace-heading">
         <div>
-          <p class="eyebrow">Translation desk / 03</p>
-          <h2 id="workspace-title">Make it understood.</h2>
+          <p class="eyebrow">{tx('workspaceEyebrow')}</p>
+          <h2 id="workspace-title">{tx('workspaceTitle')}</h2>
         </div>
-        <div class="shortcut-hint"><kbd>⌘</kbd><kbd>↵</kbd> to translate</div>
+        <div class="shortcut-hint"><kbd>⌘</kbd><kbd>↵</kbd> {tx('shortcut')}</div>
       </div>
 
       <div class="language-bar">
         <label class="language-select">
-          <span>Source</span>
+          <span>{tx('source')}</span>
           <select bind:value={source} disabled={busy}>
-            <option value={AUTO_DETECT_CODE}>Auto-detect</option>
+            <option value={AUTO_DETECT_CODE}>{tx('autoDetect')}</option>
             {#each LANGUAGES as language (language.code)}
-              <option value={language.code}>{language.name}</option>
+              <option value={language.code}>{localizedLanguageName(language.code)}</option>
             {/each}
           </select>
         </label>
@@ -376,17 +476,17 @@
           class="swap-button"
           onclick={swapLanguages}
           disabled={busy || !canSwap}
-          title="Swap languages"
-          aria-label="Swap languages"
+          title={tx('swapLanguages')}
+          aria-label={tx('swapLanguages')}
         >
           ⇄
         </button>
 
         <label class="language-select">
-          <span>Target</span>
+          <span>{tx('target')}</span>
           <select bind:value={target} disabled={busy || availableTargets.length === 0}>
             {#each availableTargets as code (code)}
-              <option value={code}>{languageName(code)}</option>
+              <option value={code}>{localizedLanguageName(code)}</option>
             {/each}
           </select>
         </label>
@@ -395,20 +495,20 @@
       <div class="editor-grid">
         <section class="editor-card input-card" aria-labelledby="input-title">
           <div class="editor-meta">
-            <span id="input-title" class="editor-label">01 / Original</span>
-            <span class="editor-count">{characterCount.toString().padStart(4, '0')} chars</span>
+            <span id="input-title" class="editor-label">{tx('original')}</span>
+            <span class="editor-count">{tx('characters', { count: characterCount.toString().padStart(4, '0') })}</span>
           </div>
           <textarea
             bind:value={text}
             onkeydown={handleEditorKeydown}
-            aria-label="Text to translate"
-            placeholder="Write, paste, or select a thought to begin…"
+            aria-label={tx('textToTranslate')}
+            placeholder={tx('textPlaceholder')}
             maxlength="5000"
           ></textarea>
           <div class="editor-footer">
-            <span>{displayLanguageName(source)} · stays on device</span>
+            <span>{displayLanguageName(source)} · {tx('staysOnDevice')}</span>
             {#if text}
-              <button class="text-button" onclick={() => (text = '')}>Clear</button>
+              <button class="text-button" onclick={() => (text = '')}>{tx('clear')}</button>
             {/if}
           </div>
         </section>
@@ -417,31 +517,31 @@
 
         <section class="editor-card output-card" aria-labelledby="output-title" aria-live="polite">
           <div class="editor-meta">
-            <span id="output-title" class="editor-label">02 / Translation</span>
+            <span id="output-title" class="editor-label">{tx('translation')}</span>
             {#if resultPair}
-              <span class="editor-count">{languageName(resultPair.target)}</span>
+              <span class="editor-count">{localizedLanguageName(resultPair.target)}</span>
             {:else}
-              <span class="editor-count">Ready when you are</span>
+              <span class="editor-count">{tx('readyWhenYouAre')}</span>
             {/if}
           </div>
           <div class="output-content">
             {#if result}
               <p class="result-text">{result}</p>
             {:else}
-              <p class="output-placeholder">Your translation will appear here, with no server in between.</p>
+              <p class="output-placeholder">{tx('outputPlaceholder')}</p>
             {/if}
           </div>
           <div class="editor-footer">
-            <span>{resultPair ? `${languageName(resultPair.source)} → ${languageName(resultPair.target)}` : 'Local model output'}</span>
+            <span>{resultPair ? localizedLanguageName(resultPair.source) + ' → ' + localizedLanguageName(resultPair.target) : tx('localModelOutput')}</span>
             {#if result}
-              <button class="text-button" onclick={copyResult}>{copied ? 'Copied' : 'Copy'}</button>
+              <button class="text-button" onclick={copyResult}>{copied ? tx('copied') : tx('copy')}</button>
             {/if}
           </div>
         </section>
       </div>
 
       <div class="action-row">
-        <div class="action-status" class:error={status.kind === 'error'} aria-live="polite">
+        <div class="action-status" class:error={status.kind === 'error'} aria-live="polite" role={status.kind === 'error' ? 'alert' : 'status'}>
           {#if status.kind === 'busy'}
             <span class="status-spinner" aria-hidden="true"></span>
             {status.text}
@@ -450,15 +550,15 @@
             {status.text}
           {:else}
             <span class="status-check" aria-hidden="true">✓</span>
-            Ready for a local translation
+            {tx('readyLocal')}
           {/if}
         </div>
         <div class="action-buttons">
           {#if busy}
-            <button class="button button-quiet" onclick={cancelTranslate}>Cancel</button>
+            <button class="button button-quiet" onclick={cancelTranslate}>{tx('cancel')}</button>
           {/if}
           <button class="button button-primary" onclick={runTranslate} disabled={busy || !text.trim()}>
-            {busy ? 'Working…' : 'Translate'}
+            {busy ? tx('working') : tx('translate')}
             <span aria-hidden="true">↗</span>
           </button>
         </div>
@@ -469,33 +569,33 @@
       <section class="history-panel" aria-labelledby="history-title">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Recent work / 04</p>
-            <h2 id="history-title">Translation history</h2>
+            <p class="eyebrow">{tx('recentWorkEyebrow')}</p>
+            <h2 id="history-title">{tx('history')}</h2>
           </div>
           {#if history.length > 0}
-            <button class="text-button" onclick={removeAllHistory}>Clear all</button>
+            <button class="text-button" onclick={removeAllHistory}>{tx('clearAll')}</button>
           {/if}
         </div>
 
         {#if history.length === 0}
           <div class="empty-history">
             <span class="empty-mark" aria-hidden="true">∿</span>
-            <p>Your recent translations will collect here.</p>
-            <span>Stored locally · up to {MAX_HISTORY_ENTRIES} entries</span>
+            <p>{tx('emptyHistory')}</p>
+            <span>{tx('storedLocally', { count: MAX_HISTORY_ENTRIES })}</span>
           </div>
         {:else}
           <div class="history-list">
             {#each history as entry (entry.id)}
               <div class="history-row">
                 <button class="history-main" onclick={() => loadHistoryEntry(entry)}>
-                  <span class="history-pair">{languageName(entry.source)} <b>→</b> {languageName(entry.target)}</span>
+                  <span class="history-pair">{localizedLanguageName(entry.source)} <b>→</b> {localizedLanguageName(entry.target)}</span>
                   <span class="history-text">{entry.text}</span>
                   <span class="history-date">{formatDate(entry.createdAt)}</span>
                 </button>
                 <button
                   class="delete-button"
                   onclick={() => removeHistoryEntry(entry.id)}
-                  aria-label={`Delete translation from ${formatDate(entry.createdAt)}`}
+                  aria-label={tx('deleteHistory', { date: formatDate(entry.createdAt) })}
                 >
                   ×
                 </button>
@@ -506,27 +606,71 @@
       </section>
 
       <aside class="local-panel" aria-labelledby="local-title">
-        <p class="eyebrow">The local promise / 05</p>
-        <h2 id="local-title">Nothing leaves<br /><em>the desk.</em></h2>
-        <p class="local-copy">
-          Models download only when you ask for a new pair. Once they arrive, inference happens in this
-          browser — private by default.
-        </p>
+        <p class="eyebrow">{tx('localPromiseEyebrow')}</p>
+        <h2 id="local-title">{tx('nothingLeavesLead')}<br /><em>{tx('nothingLeavesAccent')}</em></h2>
+        <p class="local-copy">{tx('localCopy')}</p>
         <div class="local-stamp">
           <span class="stamp-line"></span>
-          <span>0 network calls<br />during inference</span>
+          <span>{tx('localStamp')}</span>
         </div>
       </aside>
     </section>
   </main>
 
   <footer class="page-footer">
-    <span>TRANSLATLY / LOCAL MACHINE TRANSLATION</span>
-    <span>OPUS-MT · WASM · PRIVATE BY DESIGN</span>
+    <span>{tx('footerLeft')}</span>
+    <span>{tx('footerRight')}</span>
   </footer>
 </div>
 
 <style>
+  :global(:root) {
+    --canvas: #f2eee4;
+    --ink: #112337;
+    --accent: #ed7259;
+    --paper: #fffdf7;
+    --sage: #d9e6dd;
+    --sand: #ebe5d7;
+    --ambient-one: #e6c6b6;
+    --ambient-two: #cad9ce;
+    --accent-soft: #f5ddd6;
+    --deep: #112337;
+    --deep-text: #fffdf7;
+    --deep-muted: #b0c2ba;
+  }
+
+  :global(:root[data-theme='dark']) {
+    --canvas: #101a24;
+    --ink: #f4f0e8;
+    --accent: #ff947c;
+    --paper: #182733;
+    --sage: #244039;
+    --sand: #26343d;
+    --ambient-one: #3e2e35;
+    --ambient-two: #1d3a3b;
+    --accent-soft: #4a2d2d;
+    --deep: #08131d;
+    --deep-text: #f4f0e8;
+    --deep-muted: #b0c2ba;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root[data-theme='system']) {
+      --canvas: #101a24;
+      --ink: #f4f0e8;
+      --accent: #ff947c;
+      --paper: #182733;
+      --sage: #244039;
+      --sand: #26343d;
+      --ambient-one: #3e2e35;
+      --ambient-two: #1d3a3b;
+      --accent-soft: #4a2d2d;
+      --deep: #08131d;
+      --deep-text: #f4f0e8;
+      --deep-muted: #b0c2ba;
+    }
+  }
+
   :global(*) {
     box-sizing: border-box;
   }
@@ -539,7 +683,7 @@
     position: relative;
     min-height: 100vh;
     overflow: hidden;
-    background: #f2eee4;
+    background: var(--canvas);
   }
 
   .ambient {
@@ -556,7 +700,7 @@
     right: -10rem;
     width: 34rem;
     height: 34rem;
-    background: #e6c6b6;
+    background: var(--ambient-one);
   }
 
   .ambient-two {
@@ -564,7 +708,7 @@
     left: -16rem;
     width: 30rem;
     height: 30rem;
-    background: #cad9ce;
+    background: var(--ambient-two);
   }
 
   .topbar,
@@ -611,19 +755,19 @@
     height: 2rem;
     place-items: center;
     border-radius: 50%;
-    background: #112337;
-    color: #f2eee4;
+    background: var(--ink);
+    color: var(--canvas);
     font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
     font-size: 1.25rem;
     font-weight: 700;
   }
 
   .brand-mark span {
-    color: #ed7259;
+    color: var(--accent);
   }
 
   .brand-name {
-    color: #112337;
+    color: var(--ink);
     font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -674,16 +818,16 @@
     border: 1px solid rgba(17, 35, 55, 0.18);
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.3);
-    color: #112337;
+    color: var(--ink);
     font-size: 0.78rem;
     transition: 180ms ease;
   }
 
   .settings-toggle:hover,
   .settings-toggle.active {
-    border-color: #112337;
-    background: #112337;
-    color: #f2eee4;
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--canvas);
   }
 
   .settings-icon {
@@ -704,7 +848,7 @@
 
   .eyebrow {
     margin: 0 0 1rem;
-    color: #ed7259;
+    color: var(--accent);
     font-size: 0.66rem;
     letter-spacing: 0.13em;
     text-transform: uppercase;
@@ -726,14 +870,14 @@
   h1 {
     max-width: 680px;
     margin-bottom: 0;
-    color: #112337;
+    color: var(--ink);
     font-size: clamp(4rem, 8vw, 7.7rem);
     line-height: 0.82;
   }
 
   h1 em,
   h2 em {
-    color: #ed7259;
+    color: var(--accent);
     font-style: italic;
   }
 
@@ -776,7 +920,7 @@
   .workspace-heading h2,
   .section-heading h2 {
     margin-bottom: 0;
-    color: #112337;
+    color: var(--ink);
     font-size: 1.75rem;
     line-height: 1;
   }
@@ -817,20 +961,20 @@
     border: 1px solid rgba(17, 35, 55, 0.2);
     border-radius: 0.25rem;
     outline: none;
-    background: #fffdf7;
-    color: #112337;
+    background: var(--paper);
+    color: var(--ink);
   }
 
   select:focus,
   textarea:focus {
-    border-color: #ed7259;
+    border-color: var(--accent);
     box-shadow: 0 0 0 0.18rem rgba(237, 114, 89, 0.14);
   }
 
   .settings-arrow {
     align-self: end;
     padding: 0 0.1rem 0.75rem;
-    color: #ed7259;
+    color: var(--accent);
     font-size: 1.2rem;
   }
 
@@ -866,8 +1010,8 @@
     place-items: center;
     border: 1px solid rgba(17, 35, 55, 0.18);
     border-radius: 0.2rem;
-    background: #ebe5d7;
-    color: #112337;
+    background: var(--sand);
+    color: var(--ink);
     font-family: 'SFMono-Regular', Consolas, monospace;
     font-size: 0.7rem;
   }
@@ -886,7 +1030,7 @@
   .language-select select {
     padding: 0.55rem 0.7rem;
     border: 0;
-    border-bottom: 2px solid #112337;
+    border-bottom: 2px solid var(--ink);
     border-radius: 0;
     background: transparent;
     font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
@@ -900,8 +1044,8 @@
     margin-bottom: 0.1rem;
     border: 1px solid rgba(17, 35, 55, 0.2);
     border-radius: 50%;
-    background: #ebe5d7;
-    color: #112337;
+    background: var(--sand);
+    color: var(--ink);
     font-size: 1.2rem;
     line-height: 1;
     transition: 180ms ease;
@@ -909,8 +1053,8 @@
 
   .swap-button:hover:not(:disabled) {
     transform: rotate(180deg);
-    background: #ed7259;
-    color: #fffdf7;
+    background: var(--accent);
+    color: var(--paper);
   }
 
   button:disabled,
@@ -936,11 +1080,11 @@
   }
 
   .input-card {
-    background: #fffdf7;
+    background: var(--paper);
   }
 
   .output-card {
-    background: #d9e6dd;
+    background: var(--sage);
   }
 
   .editor-meta,
@@ -954,7 +1098,7 @@
   }
 
   .editor-label {
-    color: #ed7259;
+    color: var(--accent);
     font-weight: 700;
   }
 
@@ -968,7 +1112,7 @@
     border: 0;
     outline: none;
     background: transparent;
-    color: #112337;
+    color: var(--ink);
     font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
     font-size: clamp(1.25rem, 2vw, 1.65rem);
     line-height: 1.35;
@@ -988,7 +1132,7 @@
   .result-text,
   .output-placeholder {
     margin: 0;
-    color: #112337;
+    color: var(--ink);
     font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
     font-size: clamp(1.25rem, 2vw, 1.65rem);
     line-height: 1.35;
@@ -1010,7 +1154,7 @@
     padding: 0;
     border: 0;
     background: transparent;
-    color: #ed7259;
+    color: var(--accent);
     font-family: 'SFMono-Regular', Consolas, monospace;
     font-size: 0.65rem;
     letter-spacing: 0.04em;
@@ -1018,7 +1162,7 @@
   }
 
   .text-button:hover {
-    color: #112337;
+    color: var(--ink);
     text-decoration: underline;
   }
 
@@ -1029,8 +1173,8 @@
     width: 2.2rem;
     height: 2.2rem;
     border-radius: 50%;
-    background: #ed7259;
-    color: #fffdf7;
+    background: var(--accent);
+    color: var(--paper);
     font-size: 1.2rem;
   }
 
@@ -1063,7 +1207,7 @@
     place-items: center;
     border-radius: 50%;
     background: #4e9b79;
-    color: #fffdf7;
+    color: var(--paper);
     font-size: 0.65rem;
   }
 
@@ -1100,32 +1244,32 @@
 
   .button-primary {
     min-width: 9.5rem;
-    background: #ed7259;
-    color: #fffdf7;
+    background: var(--accent);
+    color: var(--paper);
   }
 
   .button-primary:hover:not(:disabled) {
-    background: #112337;
+    background: var(--ink);
     transform: translateY(-0.1rem);
   }
 
   .button-dark {
     align-self: end;
-    background: #112337;
-    color: #fffdf7;
+    background: var(--ink);
+    color: var(--paper);
   }
 
   .button-dark:hover:not(:disabled),
   .button-quiet:hover:not(:disabled) {
-    border-color: #112337;
-    background: #112337;
-    color: #fffdf7;
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
   }
 
   .button-quiet {
     border-color: rgba(17, 35, 55, 0.18);
     background: transparent;
-    color: #112337;
+    color: var(--ink);
   }
 
   .bottom-grid {
@@ -1171,7 +1315,7 @@
   }
 
   .empty-mark {
-    color: #ed7259;
+    color: var(--accent);
     font-size: 2rem;
   }
 
@@ -1194,12 +1338,12 @@
     padding: 0.9rem 0;
     border: 0;
     background: transparent;
-    color: #112337;
+    color: var(--ink);
     text-align: left;
   }
 
   .history-main:hover .history-text {
-    color: #ed7259;
+    color: var(--accent);
   }
 
   .history-pair,
@@ -1211,7 +1355,7 @@
   }
 
   .history-pair b {
-    color: #ed7259;
+    color: var(--accent);
     font-weight: 400;
   }
 
@@ -1236,15 +1380,15 @@
   }
 
   .delete-button:hover {
-    background: #f5ddd6;
+    background: var(--accent-soft);
     color: #be5747;
   }
 
   .local-panel {
     position: relative;
     overflow: hidden;
-    background: #112337;
-    color: #d9e6dd;
+    background: var(--deep);
+    color: var(--deep-text);
   }
 
   .local-panel::after {
@@ -1266,7 +1410,7 @@
     position: relative;
     z-index: 1;
     margin-bottom: 1.3rem;
-    color: #fffdf7;
+    color: var(--deep-text);
     font-size: 2.7rem;
     line-height: 0.93;
   }
@@ -1276,7 +1420,7 @@
     z-index: 1;
     max-width: 280px;
     margin-bottom: 2.7rem;
-    color: #b0c2ba;
+    color: var(--deep-muted);
     font-size: 0.86rem;
     line-height: 1.7;
   }
@@ -1285,17 +1429,18 @@
     position: relative;
     z-index: 1;
     gap: 0.8rem;
-    color: #d9e6dd;
+    color: var(--deep-text);
     font-size: 0.62rem;
     letter-spacing: 0.04em;
     line-height: 1.45;
     text-transform: uppercase;
+    white-space: pre-line;
   }
 
   .stamp-line {
     width: 2.5rem;
     height: 1px;
-    background: #ed7259;
+    background: var(--accent);
   }
 
   .page-footer {
@@ -1305,6 +1450,126 @@
     color: #84908d;
     font-size: 0.58rem;
     letter-spacing: 0.08em;
+  }
+
+  .skip-link {
+    position: fixed;
+    z-index: 20;
+    top: -4rem;
+    left: 1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 0.25rem;
+    background: var(--deep);
+    color: var(--deep-text);
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.72rem;
+    transition: top 160ms ease;
+  }
+
+  .skip-link:focus {
+    top: 1rem;
+  }
+
+  .appearance-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(17, 35, 55, 0.12);
+  }
+
+  .onboarding-dialog {
+    width: min(720px, calc(100% - 2rem));
+    padding: 0;
+    border: 1px solid rgba(17, 35, 55, 0.18);
+    border-radius: 0.55rem;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 2rem 6rem rgba(9, 19, 29, 0.28);
+  }
+
+  .onboarding-dialog::backdrop {
+    background: rgba(9, 19, 29, 0.56);
+    backdrop-filter: blur(3px);
+  }
+
+  .onboarding-content {
+    padding: clamp(1.5rem, 4vw, 2.8rem);
+  }
+
+  .onboarding-content h2 {
+    max-width: 520px;
+    margin-bottom: 0.8rem;
+    font-size: clamp(2.1rem, 6vw, 3.8rem);
+    line-height: 0.95;
+  }
+
+  .onboarding-intro {
+    max-width: 540px;
+    color: #647276;
+    line-height: 1.6;
+  }
+
+  .onboarding-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  .onboarding-grid article {
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(17, 35, 55, 0.18);
+  }
+
+  .onboarding-number {
+    color: var(--accent);
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.68rem;
+  }
+
+  .onboarding-grid h3 {
+    margin: 0.7rem 0 0.45rem;
+    color: var(--ink);
+    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 400;
+    letter-spacing: -0.035em;
+  }
+
+  .onboarding-grid p {
+    margin: 0;
+    color: #647276;
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  .onboarding-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  button:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  .history-main:focus-visible,
+  .skip-link:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   @media (max-width: 800px) {
@@ -1352,6 +1617,10 @@
 
     .settings-form .button {
       flex: 1;
+    }
+
+    .appearance-form {
+      grid-template-columns: 1fr 1fr;
     }
 
     .settings-arrow {
@@ -1413,6 +1682,21 @@
 
     .page-footer {
       gap: 0.4rem;
+    }
+
+    .onboarding-grid {
+      grid-template-columns: 1fr;
+      gap: 1.2rem;
+    }
+
+    .onboarding-actions {
+      align-items: stretch;
+      flex-direction: column-reverse;
+    }
+
+    .onboarding-actions .button,
+    .onboarding-actions .text-button {
+      width: 100%;
     }
   }
 </style>
