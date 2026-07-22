@@ -43,6 +43,25 @@ function whenEngineReady(): Promise<void> {
 }
 
 export default defineBackground(() => {
+  // Create context menu for translating selected text
+  browser.contextMenus.create({
+    id: 'translate-selection',
+    title: 'Translate with Translatly',
+    contexts: ['selection'],
+  });
+
+  // Handle context menu clicks
+  browser.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId === 'translate-selection' && tab?.id) {
+      // Send message to content script to trigger translation
+      try {
+        await browser.tabs.sendMessage(tab.id, { type: 'translate-selection' });
+      } catch (error) {
+        console.error('Failed to send message to content script:', error);
+      }
+    }
+  });
+
   if (supportsOffscreen()) {
     // Chromium MV3: relay UI messages to the offscreen engine host. Results
     // come back as engine broadcasts; no sendResponse is needed.
