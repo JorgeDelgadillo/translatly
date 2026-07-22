@@ -28,6 +28,14 @@ pnpm build:firefox    # production build (Firefox)   -> .output/firefox-mv3
 pnpm zip              # package Chrome build for store upload
 pnpm zip:firefox      # package Firefox build for store upload
 pnpm check            # type-check Svelte + TypeScript
+pnpm test:unit        # run unit tests with Vitest
+pnpm test:e2e         # build Chrome extension and run Playwright smoke tests
+```
+
+The first e2e run may require the Playwright browser binary:
+
+```sh
+pnpm exec playwright install chromium
 ```
 
 After `pnpm dev`, load the extension from `.output/chrome-mv3` (or let WXT open the

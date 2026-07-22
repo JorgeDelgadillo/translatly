@@ -89,7 +89,7 @@ pnpm copy-ort-wasm            # copy ORT .wasm binaries into public/ort (runs on
 6. ✅ Full translator page + history + settings + default languages
 7. ✅ Model manager + NLLB fallback + language auto-detection
 8. ✅ Polish: i18n (en/es), theming, accessibility, onboarding
-9. Tests: unit (Vitest) + e2e (Playwright)
+9. ✅ Tests: unit (Vitest) + e2e (Playwright)
 10. Store release prep (Chrome Web Store + AMO)
 
 ## Notes

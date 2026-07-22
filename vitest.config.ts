@@ -1,0 +1,13 @@
+import { defineConfig } from 'vitest/config';
+import { WxtVitest } from 'wxt/testing/vitest-plugin';
+
+export default defineConfig(async () => ({
+  plugins: await WxtVitest(),
+  test: {
+    environment: 'node',
+    globals: true,
+    include: ['tests/unit/**/*.test.ts'],
+    setupFiles: ['./tests/unit/setup.ts'],
+    restoreMocks: true,
+  },
+}));

@@ -45,9 +45,10 @@ export class TranslationQueue {
       controller,
     };
     this.pending.push(job);
-    this.broadcast({ type: 'translate:queued', requestId: job.requestId, position: this.pending.length });
+    const position = this.pending.length;
+    this.broadcast({ type: 'translate:queued', requestId: job.requestId, position });
     void this.pump();
-    return { position: this.pending.length };
+    return { position };
   }
 
   cancel(requestId: string): void {
