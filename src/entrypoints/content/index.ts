@@ -1,6 +1,5 @@
 import { browser } from 'wxt/browser';
 import { mount, unmount } from 'svelte';
-import Bubble from './Bubble.svelte';
 import { sendTranslateRequest } from '@/lib/messaging/translate';
 import { loadDefaultLanguages } from '@/lib/settings';
 
@@ -10,12 +9,22 @@ let bubbleComponent: ReturnType<typeof mount> | null = null;
 let currentRequestId: string | null = null;
 let defaults = { source: 'en', target: 'es' };
 
+// Lazy load Bubble component to avoid SSR issues during pre-rendering
+let Bubble: typeof import('./Bubble.svelte').default | null = null;
+async function loadBubble() {
+  if (!Bubble) {
+    const module = await import('./Bubble.svelte');
+    Bubble = module.default;
+  }
+  return Bubble;
+}
+
 // Load default languages on script initialization
 loadDefaultLanguages().then((d) => {
   defaults = d;
 });
 
-function showBubble(text: string, rect: DOMRect) {
+async function showBubble(text: string, rect: DOMRect) {
   // Remove existing bubble if any
   hideBubble();
 
@@ -37,11 +46,14 @@ function showBubble(text: string, rect: DOMRect) {
   // Create Shadow DOM
   bubbleShadow = bubbleHost.attachShadow({ mode: 'closed' });
 
+  // Load Bubble component dynamically
+  const BubbleComponent = await loadBubble();
+
   // Mount Svelte component
   const requestId = sendTranslateRequest(text, defaults.source, defaults.target);
   currentRequestId = requestId;
 
-  bubbleComponent = mount(Bubble, {
+  bubbleComponent = mount(BubbleComponent, {
     target: bubbleShadow,
     props: {
       text,
@@ -69,7 +81,7 @@ function hideBubble() {
   currentRequestId = null;
 }
 
-function handleSelection() {
+async function handleSelection() {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
     return;
@@ -83,7 +95,7 @@ function handleSelection() {
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
 
-  showBubble(text, rect);
+  await showBubble(text, rect);
 }
 
 // Listen for mouseup to detect selection
