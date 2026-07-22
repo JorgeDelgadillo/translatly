@@ -19,6 +19,7 @@ web-ext.config.ts
 .agents
 plan.md
 skills-lock.json
+AGENTS.md
 
 # Editor directories and files
 .vscode/*
