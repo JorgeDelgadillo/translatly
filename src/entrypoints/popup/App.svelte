@@ -5,7 +5,7 @@
     sendTranslateCancel,
     onEngineBroadcast,
   } from '@/lib/messaging/translate';
-  import { LANGUAGES, getPair, supportedTargets, languageName } from '@/lib/engine/registry';
+  import { LANGUAGES, getTranslationRoute, supportedTargets, languageName } from '@/lib/engine/registry';
   import { loadDefaultLanguages, saveDefaultLanguages } from '@/lib/settings';
   import { openTranslatorPage } from '@/lib/messaging/navigation';
 
@@ -84,7 +84,7 @@
 
   function runTranslate() {
     if (busy || !text.trim() || !source || !target) return;
-    if (!getPair(source, target)) {
+    if (!getTranslationRoute(source, target)) {
       status = { kind: 'error', text: `No model for ${languageName(source)} → ${languageName(target)}` };
       return;
     }

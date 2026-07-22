@@ -30,6 +30,7 @@ interface Job {
 export class TranslationQueue {
   private readonly active = new Map<string, AbortController>();
   private readonly pending: Job[] = [];
+  private readonly modelOperations: Array<() => Promise<void>> = [];
   private pumping = false;
 
   constructor(private readonly emit: BroadcastHandler = defaultBroadcast) {}
@@ -74,11 +75,23 @@ export class TranslationQueue {
     for (const controller of this.active.values()) controller.abort();
   }
 
+  /** Runs model cache operations in the same serial lane as inference. */
+  enqueueModelOperation(operation: () => Promise<void>): void {
+    this.modelOperations.push(operation);
+    void this.pump();
+  }
+
   private async pump(): Promise<void> {
     if (this.pumping) return;
     this.pumping = true;
     try {
-      while (this.pending.length > 0) {
+      while (this.pending.length > 0 || this.modelOperations.length > 0) {
+        if (this.pending.length === 0) {
+          const operation = this.modelOperations.shift() as () => Promise<void>;
+          await operation();
+          continue;
+        }
+
         const job = this.pending.shift() as Job;
         if (job.controller.signal.aborted) continue;
 

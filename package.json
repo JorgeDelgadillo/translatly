@@ -36,6 +36,7 @@
     ]
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.2.0"
+    "@huggingface/transformers": "^4.2.0",
+    "franc-min": "^6.2.0"
   }
 }

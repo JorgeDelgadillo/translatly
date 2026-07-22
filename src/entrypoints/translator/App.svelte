@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import ModelManager from './ModelManager.svelte';
   import {
     addTranslationHistory,
     clearTranslationHistory,
@@ -7,7 +8,13 @@
     loadTranslationHistory,
     type TranslationHistoryEntry,
   } from '@/lib/history';
-  import { LANGUAGES, getPair, languageName, supportedTargets } from '@/lib/engine/registry';
+  import {
+    LANGUAGES,
+    getTranslationRoute,
+    languageName,
+    supportedTargets,
+  } from '@/lib/engine/registry';
+  import { AUTO_DETECT_CODE, detectLanguage } from '@/lib/engine/detection';
   import { onEngineBroadcast, sendTranslateCancel, sendTranslateRequest } from '@/lib/messaging/translate';
   import { loadDefaultLanguages, saveDefaultLanguages } from '@/lib/settings';
 
@@ -34,16 +41,21 @@
   let status = $state<Status>({ kind: 'idle' });
   let copied = $state(false);
   let settingsOpen = $state(false);
+  let modelsOpen = $state(false);
   let settingsSource = $state('en');
   let settingsTarget = $state('es');
   let defaultSaved = $state(false);
   let history = $state<TranslationHistoryEntry[]>([]);
   let activeRequest = $state<ActiveRequest | null>(null);
 
-  const availableTargets = $derived(supportedTargets(source));
+  const availableTargets = $derived(
+    source === AUTO_DETECT_CODE
+      ? LANGUAGES.map((language) => language.code)
+      : supportedTargets(source),
+  );
   const settingsTargets = $derived(supportedTargets(settingsSource));
   const busy = $derived(activeRequest !== null);
-  const canSwap = $derived(getPair(target, source) !== undefined);
+  const canSwap = $derived(source !== AUTO_DETECT_CODE && getTranslationRoute(target, source) !== undefined);
   const characterCount = $derived(text.length);
 
   onMount(async () => {
@@ -55,7 +67,7 @@
 
     const requestedSource = params.get('source') ?? defaults.source;
     const requestedTarget = params.get('target') ?? defaults.target;
-    const validSource = LANGUAGES.some((language) => language.code === requestedSource)
+    const validSource = requestedSource === AUTO_DETECT_CODE || LANGUAGES.some((language) => language.code === requestedSource)
       ? requestedSource
       : defaults.source;
     const validTargets = supportedTargets(validSource);
@@ -137,10 +149,18 @@
 
   function runTranslate(): void {
     if (busy || !text.trim() || !source || !target) return;
-    if (!getPair(source, target)) {
+    const detectedSource = source === AUTO_DETECT_CODE ? detectLanguage(text) : source;
+    if (!detectedSource) {
       status = {
         kind: 'error',
-        text: `No local model for ${languageName(source)} → ${languageName(target)}`,
+        text: 'Add a little more text so the local detector can identify the language',
+      };
+      return;
+    }
+    if (!getTranslationRoute(detectedSource, target)) {
+      status = {
+        kind: 'error',
+        text: 'No local model for ' + languageName(detectedSource) + ' → ' + languageName(target),
       };
       return;
     }
@@ -148,9 +168,15 @@
     result = '';
     resultPair = null;
     copied = false;
-    const id = sendTranslateRequest(text, source, target);
-    activeRequest = { id, text, source, target };
-    status = { kind: 'busy', text: 'Preparing local model…' };
+    const id = sendTranslateRequest(text, detectedSource, target);
+    activeRequest = { id, text, source: detectedSource, target };
+    status = {
+      kind: 'busy',
+      text:
+        source === AUTO_DETECT_CODE
+          ? 'Detected ' + languageName(detectedSource) + ' · preparing model…'
+          : 'Preparing local model…',
+    };
   }
 
   function cancelTranslate(): void {
@@ -187,7 +213,7 @@
   }
 
   async function saveSettings(): Promise<void> {
-    if (!getPair(settingsSource, settingsTarget)) {
+    if (!getTranslationRoute(settingsSource, settingsTarget)) {
       settingsTarget = settingsTargets[0] ?? settingsTarget;
     }
     await saveDefaultLanguages({ source: settingsSource, target: settingsTarget });
@@ -224,6 +250,10 @@
       minute: '2-digit',
     }).format(timestamp);
   }
+
+  function displayLanguageName(code: string): string {
+    return code === AUTO_DETECT_CODE ? 'Auto-detect' : languageName(code);
+  }
 </script>
 
 <svelte:head>
@@ -255,6 +285,15 @@
       >
         <span class="settings-icon" aria-hidden="true">✳</span>
         Settings
+      </button>
+      <button
+        class:active={modelsOpen}
+        class="settings-toggle"
+        onclick={() => (modelsOpen = !modelsOpen)}
+        aria-expanded={modelsOpen}
+      >
+        <span class="settings-icon" aria-hidden="true">◒</span>
+        Models
       </button>
     </div>
   </header>
@@ -309,6 +348,10 @@
       </section>
     {/if}
 
+    {#if modelsOpen}
+      <ModelManager />
+    {/if}
+
     <section class="workspace" aria-labelledby="workspace-title">
       <div class="workspace-heading">
         <div>
@@ -322,6 +365,7 @@
         <label class="language-select">
           <span>Source</span>
           <select bind:value={source} disabled={busy}>
+            <option value={AUTO_DETECT_CODE}>Auto-detect</option>
             {#each LANGUAGES as language (language.code)}
               <option value={language.code}>{language.name}</option>
             {/each}
@@ -362,7 +406,7 @@
             maxlength="5000"
           ></textarea>
           <div class="editor-footer">
-            <span>{languageName(source)} · stays on device</span>
+            <span>{displayLanguageName(source)} · stays on device</span>
             {#if text}
               <button class="text-button" onclick={() => (text = '')}>Clear</button>
             {/if}

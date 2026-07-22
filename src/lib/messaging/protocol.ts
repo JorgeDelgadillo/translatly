@@ -23,10 +23,31 @@ export interface TranslateCancelAllMessage {
   type: 'translate:cancelAll';
 }
 
+/** UI -> engine: download and warm a model in the engine host. */
+export interface ModelDownloadRequestMessage {
+  type: 'model:download';
+  modelId: string;
+}
+
+/** UI -> engine: remove a model from the local Transformers.js cache. */
+export interface ModelDeleteRequestMessage {
+  type: 'model:delete';
+  modelId: string;
+}
+
+/** UI -> engine: check whether a model is already cached locally. */
+export interface ModelStatusRequestMessage {
+  type: 'model:status:request';
+  modelId: string;
+}
+
 export type UiToEngineMessage =
   | TranslateRequestMessage
   | TranslateCancelMessage
-  | TranslateCancelAllMessage;
+  | TranslateCancelAllMessage
+  | ModelDownloadRequestMessage
+  | ModelDeleteRequestMessage
+  | ModelStatusRequestMessage;
 
 /** Engine -> broadcast: job was accepted into the queue. */
 export interface TranslateQueuedMessage {
@@ -63,11 +84,57 @@ export interface TranslateErrorMessage {
   cancelled?: boolean;
 }
 
+/** Engine -> broadcast: model files are being downloaded. */
+export interface ModelProgressMessage {
+  type: 'model:progress';
+  modelId: string;
+  status: string;
+  file?: string;
+  progress?: number;
+  loaded?: number;
+  total?: number;
+}
+
+/** Engine -> broadcast: model is ready for local inference. */
+export interface ModelReadyMessage {
+  type: 'model:ready';
+  modelId: string;
+  estimatedBytes: number;
+}
+
+/** Engine -> broadcast: model cache status response. */
+export interface ModelStatusMessage {
+  type: 'model:status';
+  modelId: string;
+  cached: boolean;
+  estimatedBytes: number;
+}
+
+/** Engine -> broadcast: model cache entries were removed. */
+export interface ModelDeletedMessage {
+  type: 'model:deleted';
+  modelId: string;
+}
+
+/** Engine -> broadcast: model operation failed. */
+export interface ModelErrorMessage {
+  type: 'model:error';
+  modelId: string;
+  error: string;
+}
+
 export type EngineBroadcast =
   | TranslateQueuedMessage
   | TranslateProgressMessage
   | TranslateResultMessage
   | TranslateErrorMessage;
+
+export type ModelBroadcast =
+  | ModelProgressMessage
+  | ModelReadyMessage
+  | ModelStatusMessage
+  | ModelDeletedMessage
+  | ModelErrorMessage;
 
 /**
  * Engine -> broadcast (internal): signals that the engine host has registered
@@ -94,7 +161,34 @@ export interface OpenTranslatorMessage {
 export function isUiToEngineMessage(msg: unknown): msg is UiToEngineMessage {
   if (typeof msg !== 'object' || msg === null) return false;
   const t = (msg as { type?: unknown }).type;
-  return t === 'translate:request' || t === 'translate:cancel' || t === 'translate:cancelAll';
+  return (
+    t === 'translate:request' ||
+    t === 'translate:cancel' ||
+    t === 'translate:cancelAll' ||
+    t === 'model:download' ||
+    t === 'model:delete' ||
+    t === 'model:status:request'
+  );
+}
+
+export function isModelManagerMessage(
+  msg: unknown,
+): msg is ModelDownloadRequestMessage | ModelDeleteRequestMessage | ModelStatusRequestMessage {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const t = (msg as { type?: unknown }).type;
+  return t === 'model:download' || t === 'model:delete' || t === 'model:status:request';
+}
+
+export function isModelBroadcast(msg: unknown): msg is ModelBroadcast {
+  if (typeof msg !== 'object' || msg === null) return false;
+  const t = (msg as { type?: unknown }).type;
+  return (
+    t === 'model:progress' ||
+    t === 'model:ready' ||
+    t === 'model:status' ||
+    t === 'model:deleted' ||
+    t === 'model:error'
+  );
 }
 
 export function isEngineBroadcast(msg: unknown): msg is EngineBroadcast {
