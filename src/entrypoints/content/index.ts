@@ -25,7 +25,6 @@ loadDefaultLanguages().then((d) => {
 });
 
 async function showBubble(text: string, rect: DOMRect) {
-  console.log('[Translatly] showBubble called with text:', text.substring(0, 50));
   // Remove existing bubble if any
   hideBubble();
 
@@ -34,17 +33,25 @@ async function showBubble(text: string, rect: DOMRect) {
   bubbleHost.id = 'translatly-bubble-host';
   bubbleHost.style.position = 'fixed';
   bubbleHost.style.zIndex = '2147483647';
+  bubbleHost.style.width = 'min(380px, calc(100vw - 24px))';
   bubbleHost.style.pointerEvents = 'none';
 
-  // Position near selection
-  const top = rect.bottom + window.scrollY + 8;
-  const left = rect.left + window.scrollX;
+  // Position in viewport coordinates because the host is fixed to the viewport.
+  const margin = 12;
+  const bubbleWidth = Math.min(380, window.innerWidth - margin * 2);
+  const estimatedHeight = 270;
+  const maxTop = Math.max(margin, window.innerHeight - estimatedHeight - margin);
+  const topSpace = rect.top - estimatedHeight - 8;
+  const top =
+    rect.bottom + 8 + estimatedHeight > window.innerHeight && topSpace >= margin
+      ? Math.min(topSpace, maxTop)
+      : Math.max(margin, Math.min(rect.bottom + 8, maxTop));
+  const maxLeft = Math.max(margin, window.innerWidth - bubbleWidth - margin);
+  const left = Math.min(Math.max(rect.left, margin), maxLeft);
   bubbleHost.style.top = `${top}px`;
   bubbleHost.style.left = `${left}px`;
-  console.log('[Translatly] Bubble position:', { top, left });
 
   document.body.appendChild(bubbleHost);
-  console.log('[Translatly] Bubble host appended to body');
 
   // Create Shadow DOM
   bubbleShadow = bubbleHost.attachShadow({ mode: 'closed' });
@@ -76,14 +83,11 @@ async function showBubble(text: string, rect: DOMRect) {
   bubbleShadow.appendChild(style);
 
   // Load Bubble component dynamically
-  console.log('[Translatly] Loading Bubble component...');
   const BubbleComponent = await loadBubble();
-  console.log('[Translatly] Bubble component loaded');
 
   // Mount Svelte component
-  const requestId = sendTranslateRequest(text, defaults.source, defaults.target);
+  const requestId = crypto.randomUUID();
   currentRequestId = requestId;
-  console.log('[Translatly] Translation request sent:', requestId);
 
   bubbleComponent = mount(BubbleComponent, {
     target: bubbleShadow,
@@ -95,10 +99,15 @@ async function showBubble(text: string, rect: DOMRect) {
       onClose: hideBubble,
     },
   });
-  console.log('[Translatly] Bubble component mounted');
-
   // Enable pointer events after mount
   bubbleHost.style.pointerEvents = 'auto';
+
+  // Let the component register its listener before the engine can answer.
+  queueMicrotask(() => {
+    if (currentRequestId === requestId) {
+      sendTranslateRequest(text, defaults.source, defaults.target, requestId);
+    }
+  });
 }
 
 function hideBubble() {
@@ -119,23 +128,18 @@ function hideBubble() {
 }
 
 async function handleSelection() {
-  console.log('[Translatly] handleSelection called');
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
-    console.log('[Translatly] No selection or collapsed');
     return;
   }
 
   const text = selection.toString().trim();
-  console.log('[Translatly] Selected text:', text.substring(0, 50));
   if (!text || text.length > 5000) {
-    console.log('[Translatly] Text empty or too long');
     return;
   }
 
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
-  console.log('[Translatly] Selection rect:', rect);
 
   await showBubble(text, rect);
 }
@@ -144,11 +148,8 @@ export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
   main() {
-    console.log('[Translatly] Content script loaded');
-
     // Listen for mouseup to detect selection
     document.addEventListener('mouseup', (e) => {
-      console.log('[Translatly] mouseup detected');
       // Ignore clicks inside the bubble
       if (bubbleHost && bubbleHost.contains(e.target as Node)) {
         return;
@@ -167,29 +168,14 @@ export default defineContentScript({
 
     // Listen for messages from background (e.g., context menu)
     browser.runtime.onMessage.addListener((msg: unknown) => {
-      console.log('[Translatly] Message received:', msg);
-
-      // Log all engine broadcasts for debugging
       if (typeof msg === 'object' && msg !== null && 'type' in msg) {
-        const type = (msg as any).type;
-        if (
-          type === 'translate:queued' ||
-          type === 'translate:progress' ||
-          type === 'translate:result' ||
-          type === 'translate:error'
-        ) {
-          console.log('[Translatly] Engine broadcast:', type, msg);
-        }
-
+        const type = (msg as { type?: unknown }).type;
         if (type === 'translate-selection') {
-          console.log('[Translatly] translate-selection triggered');
           handleSelection();
           return true;
         }
       }
       return false;
     });
-
-    console.log('[Translatly] Event listeners registered');
   },
 });

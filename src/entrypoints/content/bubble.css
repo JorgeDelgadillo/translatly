@@ -1,0 +1,370 @@
+.bubble {
+  --bubble-bg: #fffdf8;
+  --bubble-surface: #f6f1e8;
+  --bubble-result: #f0f6f1;
+  --bubble-ink: #112337;
+  --bubble-muted: #68777a;
+  --bubble-line: #d9ddd8;
+  --bubble-accent: #ed7259;
+  --bubble-accent-soft: #f9e1da;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--bubble-line);
+  border-radius: 14px;
+  background: var(--bubble-bg);
+  box-shadow: 0 18px 48px rgba(17, 35, 55, 0.2), 0 3px 10px rgba(17, 35, 55, 0.12);
+  color: var(--bubble-ink);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.bubble.dark {
+  --bubble-bg: #182733;
+  --bubble-surface: #20333e;
+  --bubble-result: #1d3836;
+  --bubble-ink: #f4f0e8;
+  --bubble-muted: #b2c0bd;
+  --bubble-line: #50636b;
+  --bubble-accent: #ff947c;
+  --bubble-accent-soft: #4a2d2d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bubble:not(.light) {
+    --bubble-bg: #182733;
+    --bubble-surface: #20333e;
+    --bubble-result: #1d3836;
+    --bubble-ink: #f4f0e8;
+    --bubble-muted: #b2c0bd;
+    --bubble-line: #50636b;
+    --bubble-accent: #ff947c;
+    --bubble-accent-soft: #4a2d2d;
+  }
+}
+
+.top-accent {
+  height: 3px;
+  background: var(--bubble-accent);
+}
+
+.header,
+.brand,
+.language-bar,
+.panel-heading,
+.footer,
+.footer-note,
+.actions,
+.action-button,
+.loading-state {
+  display: flex;
+  align-items: center;
+}
+
+.header {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px 9px;
+}
+
+.brand {
+  min-width: 0;
+  gap: 7px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--bubble-ink);
+  color: var(--bubble-bg);
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.brand-name {
+  color: var(--bubble-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.local-badge {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: var(--bubble-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.local-dot,
+.footer-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #4e9b79;
+  box-shadow: 0 0 0 3px rgba(78, 155, 121, 0.14);
+}
+
+.close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bubble-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--bubble-surface);
+  color: var(--bubble-ink);
+}
+
+.close svg,
+.action-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.language-bar {
+  gap: 7px;
+  padding: 9px 13px;
+  border-top: 1px solid var(--bubble-line);
+  border-bottom: 1px solid var(--bubble-line);
+  background: var(--bubble-surface);
+}
+
+.language-chip {
+  overflow: hidden;
+  color: var(--bubble-ink);
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.language-chip.target {
+  color: var(--bubble-accent);
+}
+
+.language-arrow {
+  color: var(--bubble-muted);
+  font-size: 14px;
+}
+
+.translation-stack {
+  padding: 12px 13px 0;
+}
+
+.text-panel {
+  overflow: hidden;
+  padding: 11px 12px;
+  border: 1px solid var(--bubble-line);
+  border-radius: 10px;
+}
+
+.source-panel {
+  background: var(--bubble-bg);
+}
+
+.result-panel {
+  min-height: 86px;
+  background: var(--bubble-result);
+}
+
+.panel-heading {
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.panel-label,
+.panel-hint,
+.footer-note {
+  color: var(--bubble-muted);
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.panel-label {
+  color: var(--bubble-accent);
+  font-weight: 750;
+}
+
+.panel-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-text,
+.result-text,
+.error-text {
+  max-height: 106px;
+  margin: 0;
+  overflow-y: auto;
+  color: var(--bubble-ink);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.result-text {
+  font-size: 14px;
+}
+
+.error-text {
+  color: #b44f43;
+  font-size: 12px;
+}
+
+.flow-divider {
+  display: flex;
+  height: 23px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.flow-line {
+  height: 1px;
+  flex: 1;
+  background: var(--bubble-line);
+}
+
+.flow-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid var(--bubble-line);
+  border-radius: 50%;
+  color: var(--bubble-accent);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.loading-state {
+  min-height: 51px;
+  gap: 9px;
+  color: var(--bubble-muted);
+  font-size: 12px;
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  border: 2px solid var(--bubble-line);
+  border-top-color: var(--bubble-accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.footer {
+  min-height: 52px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px 13px;
+}
+
+.footer-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.actions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.action-button {
+  min-height: 30px;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--bubble-line);
+  border-radius: 7px;
+  background: var(--bubble-bg);
+  color: var(--bubble-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.action-button:hover {
+  border-color: var(--bubble-accent);
+  background: var(--bubble-accent-soft);
+}
+
+.action-button.primary {
+  border-color: var(--bubble-accent);
+  background: var(--bubble-accent);
+  color: #fffdf8;
+}
+
+.action-button.primary:hover {
+  filter: brightness(0.96);
+}
+
+button:focus-visible {
+  outline: 3px solid var(--bubble-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 360px) {
+  .local-badge {
+    display: none;
+  }
+
+  .footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions,
+  .footer > .action-button {
+    width: 100%;
+  }
+
+  .actions .action-button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.5s;
+  }
+}

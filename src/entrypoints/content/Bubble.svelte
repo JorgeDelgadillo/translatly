@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { browser } from 'wxt/browser';
-  import type { EngineBroadcast } from '@/lib/messaging/protocol';
+  import { isEngineBroadcast } from '@/lib/messaging/protocol';
   import { openTranslatorPage } from '@/lib/messaging/navigation';
   import { loadPreferences, type Locale, type ThemePreference } from '@/lib/settings';
   import { languageLabel, translate, type MessageKey } from '@/lib/i18n';
+  import bubbleStyles from './bubble.css?raw';
 
-  type Status = 'idle' | 'translating' | 'done' | 'error';
+  type Status = 'translating' | 'done' | 'error';
 
   interface Props {
     text: string;
@@ -20,6 +21,7 @@
 
   let status = $state<Status>('translating');
   let translation = $state('');
+  let loadingText = $state('');
   let errorMessage = $state('');
   let copied = $state(false);
   let locale = $state<Locale>('en');
@@ -36,26 +38,28 @@
   });
 
   $effect(() => {
-    console.log('[Translatly Bubble] Setting up message listener');
     const listener = (msg: unknown) => {
-      console.log('[Translatly Bubble] Message received:', msg);
-      if (!isEngineBroadcast(msg)) return;
-      if (msg.requestId !== requestId) {
-        console.log('[Translatly Bubble] Ignoring message for different requestId');
-        return;
-      }
+      if (!isEngineBroadcast(msg) || msg.requestId !== requestId) return;
 
-      console.log('[Translatly Bubble] Processing message:', msg.type);
       switch (msg.type) {
+        case 'translate:queued':
+          loadingText = tx('queued', { position: msg.position });
+          break;
+        case 'translate:progress':
+          loadingText =
+            msg.progress != null
+              ? tx('loadingModelProgress', { progress: msg.progress.toFixed(0) })
+              : tx('loadingModel', { status: msg.status });
+          break;
         case 'translate:result':
-          console.log('[Translatly Bubble] Translation result:', msg.translation);
           status = 'done';
           translation = msg.translation;
           break;
         case 'translate:error':
-          console.log('[Translatly Bubble] Translation error:', msg.error);
           status = 'error';
-          errorMessage = tx('translationError') + ': ' + msg.error;
+          errorMessage = msg.cancelled
+            ? tx('cancelled')
+            : `${tx('translationError')}: ${msg.error}`;
           break;
       }
     };
@@ -72,168 +76,111 @@
       setTimeout(() => (copied = false), 1500);
     } catch {
       errorMessage = tx('failedToCopy');
+      status = 'error';
     }
   }
 
   function openFullPage() {
     openTranslatorPage({ text, source, target });
   }
-
-  function isEngineBroadcast(msg: unknown): msg is EngineBroadcast {
-    return (
-      typeof msg === 'object' &&
-      msg !== null &&
-      'type' in msg &&
-      ['translate:queued', 'translate:progress', 'translate:result', 'translate:error'].includes(
-        msg.type as string,
-      )
-    );
-  }
 </script>
 
-<div class="bubble" class:dark={theme === 'dark'} class:light={theme === 'light'} role="dialog" aria-label={tx('translation')}>
-  <div class="header">
-    <span class="lang">{languageLabel(source, locale)} → {languageLabel(target, locale)}</span>
-    <button class="close" onclick={onClose} aria-label={tx('close')}>×</button>
+<svelte:element this={'style'}>{bubbleStyles}</svelte:element>
+
+<div
+  class="bubble"
+  class:dark={theme === 'dark'}
+  class:light={theme === 'light'}
+  role="dialog"
+  aria-label={tx('translation')}
+>
+  <div class="top-accent" aria-hidden="true"></div>
+
+  <header class="header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">T</span>
+      <span class="brand-name">Translatly</span>
+      <span class="local-badge">
+        <span class="local-dot" aria-hidden="true"></span>
+        {tx('inferenceLocal')}
+      </span>
+    </div>
+    <button class="close" onclick={onClose} aria-label={tx('close')} title={tx('close')}>
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <path d="m5 5 10 10M15 5 5 15" />
+      </svg>
+    </button>
+  </header>
+
+  <div class="language-bar">
+    <span class="language-chip">{languageLabel(source, locale)}</span>
+    <span class="language-arrow" aria-hidden="true">→</span>
+    <span class="language-chip target">{languageLabel(target, locale)}</span>
   </div>
 
-  {#if status === 'translating'}
-    <div class="content translating" role="status" aria-live="polite">{tx('translatingEllipsis')}</div>
-  {:else if status === 'error'}
-    <div class="content error" role="alert">{errorMessage}</div>
-  {:else if status === 'done'}
-    <div class="content done">
-      <p class="translation">{translation}</p>
-      <div class="actions">
-        <button onclick={copyTranslation}>{copied ? tx('copiedBang') : tx('copy')}</button>
-        <button onclick={openFullPage}>{tx('openInFullPage')}</button>
+  <div class="translation-stack">
+    <section class="text-panel source-panel" aria-labelledby="source-label">
+      <div class="panel-heading">
+        <span id="source-label" class="panel-label">{tx('original')}</span>
+        <span class="panel-hint">{tx('staysOnDevice')}</span>
       </div>
+      <p class="source-text">{text}</p>
+    </section>
+
+    <div class="flow-divider" aria-hidden="true">
+      <span class="flow-line"></span>
+      <span class="flow-icon">↓</span>
+      <span class="flow-line"></span>
     </div>
-  {/if}
+
+    <section class="text-panel result-panel" aria-labelledby="result-label" aria-live="polite">
+      <div class="panel-heading">
+        <span id="result-label" class="panel-label">{tx('translation')}</span>
+        <span class="panel-hint">{tx('localModelOutput')}</span>
+      </div>
+
+      {#if status === 'translating'}
+        <div class="loading-state" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          <span>{loadingText || tx('translatingEllipsis')}</span>
+        </div>
+      {:else if status === 'error'}
+        <p class="error-text" role="alert">{errorMessage}</p>
+      {:else}
+        <p class="result-text">{translation}</p>
+      {/if}
+    </section>
+  </div>
+
+  <footer class="footer">
+    <span class="footer-note">
+      <span class="footer-dot" aria-hidden="true"></span>
+      {tx('inferenceLocal')}
+    </span>
+
+    {#if status === 'done'}
+      <div class="actions">
+        <button class="action-button" onclick={copyTranslation} title={tx('copy')}>
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="6.5" y="6.5" width="8" height="9" rx="1.5" />
+            <path d="M12 6V4.5A1.5 1.5 0 0 0 10.5 3h-5A1.5 1.5 0 0 0 4 4.5v7A1.5 1.5 0 0 0 5.5 13H6" />
+          </svg>
+          {copied ? tx('copied') : tx('copy')}
+        </button>
+        <button class="action-button primary" onclick={openFullPage}>
+          {tx('openInFullPage')}
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 15 15 5M7 5h8v8" />
+          </svg>
+        </button>
+      </div>
+    {:else if status === 'error'}
+      <button class="action-button primary" onclick={openFullPage}>
+        {tx('openInFullPage')}
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M5 15 15 5M7 5h8v8" />
+        </svg>
+      </button>
+    {/if}
+  </footer>
 </div>
-
-<style>
-  .bubble {
-    --bubble-bg: #fffdf7;
-    --bubble-surface: #f4f0e8;
-    --bubble-ink: #213547;
-    --bubble-line: #d4d9d6;
-    --bubble-accent: #ed7259;
-    position: relative;
-    background: var(--bubble-bg);
-    border: 1px solid var(--bubble-line);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    max-width: 400px;
-    min-width: 200px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-  }
-
-  .bubble.dark {
-    --bubble-bg: #182733;
-    --bubble-surface: #101a24;
-    --bubble-ink: #f4f0e8;
-    --bubble-line: #65717a;
-    --bubble-accent: #ff947c;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .bubble:not(.light) {
-      --bubble-bg: #182733;
-      --bubble-surface: #101a24;
-      --bubble-ink: #f4f0e8;
-      --bubble-line: #65717a;
-      --bubble-accent: #ff947c;
-    }
-  }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--bubble-line);
-    background: var(--bubble-surface);
-    border-radius: 8px 8px 0 0;
-  }
-
-  .lang {
-    font-size: 12px;
-    color: var(--bubble-ink);
-    font-weight: 500;
-  }
-
-  .close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-    color: var(--bubble-ink);
-    padding: 0;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .close:hover {
-    color: #333;
-  }
-
-  .content {
-    padding: 12px;
-  }
-
-  .translating {
-    color: var(--bubble-ink);
-    font-style: italic;
-  }
-
-  .error {
-    color: #b44f43;
-    font-size: 13px;
-  }
-
-  .done .translation {
-    margin: 0 0 12px 0;
-    line-height: 1.5;
-    color: var(--bubble-ink);
-  }
-
-  .actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  .actions button {
-    padding: 6px 12px;
-    border: 1px solid var(--bubble-line);
-    border-radius: 4px;
-    background: var(--bubble-bg);
-    cursor: pointer;
-    font-size: 12px;
-    color: var(--bubble-ink);
-    transition: all 0.2s;
-  }
-
-  .actions button:hover {
-    background: var(--bubble-surface);
-    border-color: var(--bubble-accent);
-  }
-
-  button:focus-visible {
-    outline: 3px solid var(--bubble-accent);
-    outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      transition-duration: 0.01ms !important;
-    }
-  }
-</style>

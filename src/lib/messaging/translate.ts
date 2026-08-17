@@ -1,9 +1,13 @@
 import { browser } from 'wxt/browser';
 import { isEngineBroadcast, type EngineBroadcast } from './protocol';
 
-/** Sends a translation request and returns the generated request id. */
-export function sendTranslateRequest(text: string, srcLang: string, tgtLang: string): string {
-  const requestId = crypto.randomUUID();
+/** Sends a translation request and returns its request id. */
+export function sendTranslateRequest(
+  text: string,
+  srcLang: string,
+  tgtLang: string,
+  requestId = crypto.randomUUID(),
+): string {
   void browser.runtime.sendMessage({ type: 'translate:request', requestId, text, srcLang, tgtLang });
   return requestId;
 }
