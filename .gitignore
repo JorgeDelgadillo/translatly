@@ -17,7 +17,6 @@ playwright-report
 test-results
 web-ext.config.ts
 .agents
-plan.md
 skills-lock.json
 AGENTS.md
 

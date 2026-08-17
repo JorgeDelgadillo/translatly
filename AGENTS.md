@@ -17,7 +17,7 @@ temporary issue tracking to this file. Update `plan.md` when status changes.
 
 ## Product
 
-Translatly is a private, local-first translation product.
+Translatly is a private, local-first browser extension.
 
 The current browser extension supports Chromium MV3 and Firefox MV2 from one
 codebase. It has three user surfaces:
@@ -27,10 +27,9 @@ codebase. It has three user surfaces:
 3. A full translator page with history, settings, onboarding, localization,
    themes, language detection, and model management.
 
-The approved mobile product uses React Native and Expo for Android and iOS. The
-long-term repository shape is a pnpm monorepo with separate extension and mobile
-applications plus a platform-independent shared core. Follow `plan.md` for when
-that migration is active; do not perform it opportunistically.
+This repository intentionally remains a single browser extension. Do not
+introduce additional clients, a monorepo migration, or a separate shared core
+without a new product decision recorded in `plan.md`.
 
 ## Privacy and Security Invariants
 
@@ -44,8 +43,8 @@ that migration is active; do not perform it opportunistically.
   Runtime code ships with the application; downloaded models are data.
 - Do not add telemetry, accounts, cloud synchronization, or remote logging
   without an explicit product decision recorded in `plan.md`.
-- Request the smallest browser or mobile permission that delivers the active
-  feature. Do not add permissions for future work.
+- Request the smallest browser permission that delivers the active feature. Do
+  not add permissions for future work.
 - Clipboard reads require an explicit user action. Shared text must not be placed
   in deep-link query strings or persistent logs.
 - Credentials, signing keys, tokens, provisioning profiles, and store secrets
@@ -91,11 +90,10 @@ the checkpoint without asking.
 Use Conventional Commit messages such as:
 
 ```text
-feat: add mobile translation history
 fix: recover interrupted model downloads
-refactor: extract shared translation core
-test: add mobile quality gates
-ci: add signed mobile release builds
+feat: add extension translation history
+test: add model lifecycle coverage
+ci: validate Firefox release builds
 docs: update project architecture guide
 ```
 
@@ -141,8 +139,8 @@ pnpm test:e2e                 # Chromium build and Playwright smoke suite
 `pnpm install` does not run project setup. Commands that need public ORT assets
 or generated WXT types invoke `pnpm run setup:extension` explicitly.
 
-When the monorepo migration lands, prefer root commands or pnpm filters defined
-by that phase instead of running a different package manager inside an app.
+Keep repository commands at the extension root and use the scripts defined in
+`package.json`.
 
 ## Browser Extension Architecture
 
@@ -214,44 +212,12 @@ UI -> background coordinator -> engine host -> lifecycle broadcasts -> UI
 - Validate persisted values before use and fall back to safe defaults.
 - Keep storage migrations backward-compatible when stored shapes change.
 
-## Mobile Architecture Guardrails
+## Extension Scope
 
-These rules apply when mobile implementation is the active phase:
-
-- Use React Native, Expo, TypeScript, Expo Router, and Expo development builds.
-- Expo Go is not a supported product runtime because native inference is
-  required.
-- Use `onnxruntime-react-native` behind a `TranslationEngine` adapter.
-- Use filesystem storage for model artifacts and SQLite for structured local
-  data.
-- Run expensive model work outside the UI path and keep input, cancellation, and
-  progress feedback responsive.
-- Configure Android and iOS differences through platform adapters, Expo config
-  plugins, or local native modules. Do not scatter platform checks through
-  shared domain code.
-- Mobile deep links use the `translatly://` scheme. Never include translation
-  text in a URL.
-- The permanent Android and iOS identifier is `com.translatly.mobile`.
-- The minimum supported versions are Android 10 and iOS 16.
-- EAS Build manages signing credentials; GitHub receives only the required EAS
-  token through secrets.
-- Signed mobile builds run only for `mobile-vX.Y.Z` releases and do not submit to
-  a store automatically.
-
-## Target Shared Core
-
-When `packages/core` exists, it owns only portable domain logic:
-
-- Language metadata and translation routing.
-- Model descriptors and platform-neutral model states.
-- Language detection.
-- Translation request, result, progress, and error contracts.
-- Serial queueing and cancellation orchestration.
-- Persistence repository interfaces.
-
-It must not import WXT, browser APIs, Svelte, React, React Native, Expo,
-Transformers.js, ONNX Runtime, or platform storage. Extension and mobile adapters
-implement those boundaries.
+Keep language routing, model descriptors, detection, queueing, messaging, and
+persistence adapters inside the extension architecture until a concrete browser
+platform need requires a new boundary. Do not extract speculative cross-platform
+abstractions.
 
 Changes to shared public contracts must be verified against every consumer in
 the same phase. Do not expose browser wire messages as the universal domain API;
@@ -261,22 +227,20 @@ map them at the extension boundary.
 
 - Preserve the Translatly visual identity rather than copying another product's
   branding or proprietary assets.
-- Mobile may use the familiar information hierarchy of Google Translate, but it
-  uses Translatly colors, iconography, language, spacing, and components.
 - Current Translatly anchors are warm sand `#f2eee4`, ink `#112337`, coral
   `#ed7259`, and dark background `#101a24`.
 - Support system, light, and dark appearance.
 - All interactive controls require accessible names, states, focus behavior, and
   adequate touch/click targets.
 - Support screen readers, keyboard navigation where applicable, scalable text,
-  high contrast, reduced motion, safe areas, and software keyboards.
+  high contrast, and reduced motion.
 - Do not communicate status or errors through color alone.
 
 ## Testing and Verification
 
 Choose verification based on the affected boundary:
 
-- **Shared domain:** unit tests for success, invalid input, cancellation, and
+- **Domain:** unit tests for success, invalid input, cancellation, and
   failure paths.
 - **Storage:** defaults, validation, migrations, persistence, limits, deletion,
   and corruption recovery.
@@ -288,8 +252,6 @@ Choose verification based on the affected boundary:
   localization, empty states, errors, and recovery actions.
 - **Extension integration:** Chrome and Firefox builds plus relevant Playwright
   scenarios.
-- **Mobile integration:** Android and iOS native builds, deterministic model
-  fixtures, Maestro flows, and required physical-device benchmarks.
 - **Release:** version/tag consistency, manifests, signing, artifact names,
   checksums, and release-only triggers.
 
@@ -302,9 +264,6 @@ checks as release gates.
 - Pull requests and pushes to `main` run checks and tests; they do not create
   public release packages.
 - Extension packages are generated only by the extension release workflow.
-- Mobile signed builds are generated only by the mobile release workflow.
-- Extension and mobile release tags and artifacts must not trigger or overwrite
-  each other.
 - Required checks must pass before packaging starts.
 - A failed build must not publish partial or misleading release assets.
 - Store submission is always a separate, explicitly approved action.
@@ -328,7 +287,6 @@ checks as release gates.
   defines a reviewed exception.
 - WXT entrypoint behavior can differ during pre-rendering; browser-only UI may
   need lazy loading.
-- Browser service workers, mobile application suspension, and interrupted model
-  downloads are expected lifecycle conditions and must be handled as normal
-  recoverable states.
+- Browser service workers and interrupted model downloads are expected lifecycle
+  conditions and must be handled as normal recoverable states.
 - Placeholder release assets must not be treated as final store assets.
