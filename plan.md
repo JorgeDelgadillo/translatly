@@ -30,7 +30,7 @@ Status: in progress.
 Acceptance criteria:
 
 - [x] User text is never written to URLs or diagnostic logs.
-- Persisted preferences and history reject malformed values and recover safely.
+- [x] Persisted preferences and history reject malformed values and recover safely.
 - Selection-bubble request delivery and viewport positioning are reliable.
 - Translation and model lifecycle behavior has targeted unit coverage.
 - Chromium and Firefox builds are verified with release metadata and manifest

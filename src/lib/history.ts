@@ -1,7 +1,9 @@
 import { browser } from 'wxt/browser';
+import { getTranslationRoute } from './engine/registry';
 
 const HISTORY_KEY = 'translationHistory';
 const MAX_HISTORY_ENTRIES = 50;
+const MAX_HISTORY_TEXT_LENGTH = 20_000;
 
 export interface TranslationHistoryEntry {
   id: string;
@@ -17,11 +19,17 @@ function isHistoryEntry(value: unknown): value is TranslationHistoryEntry {
   const entry = value as Partial<TranslationHistoryEntry>;
   return (
     typeof entry.id === 'string' &&
+    entry.id.length > 0 &&
     typeof entry.text === 'string' &&
+    entry.text.length <= MAX_HISTORY_TEXT_LENGTH &&
     typeof entry.translation === 'string' &&
+    entry.translation.length <= MAX_HISTORY_TEXT_LENGTH &&
     typeof entry.source === 'string' &&
     typeof entry.target === 'string' &&
-    typeof entry.createdAt === 'number'
+    getTranslationRoute(entry.source, entry.target) !== undefined &&
+    typeof entry.createdAt === 'number' &&
+    Number.isFinite(entry.createdAt) &&
+    entry.createdAt >= 0
   );
 }
 

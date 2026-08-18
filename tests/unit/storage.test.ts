@@ -6,7 +6,12 @@ import {
   deleteTranslationHistory,
   loadTranslationHistory,
 } from '@/lib/history';
-import { loadPreferences, savePreferences } from '@/lib/settings';
+import {
+  loadDefaultLanguages,
+  loadPreferences,
+  saveDefaultLanguages,
+  savePreferences,
+} from '@/lib/settings';
 
 describe('extension storage helpers', () => {
   it('loads safe defaults and persists validated preferences', async () => {
@@ -24,6 +29,15 @@ describe('extension storage helpers', () => {
       theme: 'dark',
       onboardingSeen: true,
     });
+
+    await fakeBrowser.storage.sync.set({ source: 'xx', target: 'en' });
+    expect(await loadDefaultLanguages()).toEqual({ source: 'en', target: 'es' });
+
+    await saveDefaultLanguages({ source: 'en', target: 'en' });
+    expect(await loadDefaultLanguages()).toEqual({ source: 'en', target: 'es' });
+
+    await savePreferences({ source: 'es', target: 'de' });
+    expect(await loadPreferences()).toMatchObject({ source: 'es', target: 'de' });
 
     await fakeBrowser.storage.sync.set({ locale: 'fr', theme: 'solarized', onboardingSeen: 1 });
     expect(await loadPreferences()).toMatchObject({
@@ -60,5 +74,48 @@ describe('extension storage helpers', () => {
 
     await clearTranslationHistory();
     expect(await loadTranslationHistory()).toEqual([]);
+  });
+
+  it('filters malformed or unsupported history entries during recovery', async () => {
+    await fakeBrowser.storage.local.set({
+      translationHistory: [
+        {
+          id: 'valid',
+          text: 'Hello',
+          translation: 'Hola',
+          source: 'en',
+          target: 'es',
+          createdAt: 1,
+        },
+        {
+          id: 'bad-language',
+          text: 'Hello',
+          translation: 'Hallo',
+          source: 'xx',
+          target: 'de',
+          createdAt: 2,
+        },
+        {
+          id: 'bad-date',
+          text: 'Hello',
+          translation: 'Hola',
+          source: 'en',
+          target: 'es',
+          createdAt: Number.NaN,
+        },
+        { id: 'bad-shape', text: 42, translation: 'Hola', source: 'en', target: 'es', createdAt: 3 },
+      ],
+    });
+
+    await expect(loadTranslationHistory()).resolves.toEqual([
+      {
+        id: 'valid',
+        text: 'Hello',
+        translation: 'Hola',
+        source: 'en',
+        target: 'es',
+        createdAt: 1,
+      },
+    ]);
   });
 });
