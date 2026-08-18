@@ -1,7 +1,7 @@
 # Translatly
 
 Private, fully local translation extension for Chromium-based browsers and Firefox.
-Translates any language to any language using small neural models that run 100% in
+Translates the curated language set locally using neural models that run 100% in
 your browser — no servers, no tracking, no data leaving your device.
 
 ## Features
@@ -9,8 +9,10 @@ your browser — no servers, no tracking, no data leaving your device.
 - **Selection translation**: translate selected text on any page via a floating bubble.
 - **Quick translations**: popup with instant translation between your default languages.
 - **Full translator**: local new-tab workspace with history, settings, and default language controls.
+- **Curated languages**: English, Spanish, French, German, Italian, and Portuguese.
 - Small local models (ONNX, quantized) designed to work on machines with integrated
-  GPUs and low VRAM. WASM by default, WebGPU as opt-in acceleration.
+  GPUs and low VRAM. WASM by default, WebGPU as opt-in acceleration. Four direct
+  OPUS-MT routes are available; other curated pairs use the optional NLLB fallback.
 
 ## Requirements
 

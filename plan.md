@@ -21,6 +21,11 @@ tests, and Chrome/Firefox packaging.
 
 The next focus is extension production hardening before store submission.
 
+The current language scope is six curated languages. Direct OPUS-MT models cover
+four directions; the remaining curated pairs use the larger NLLB fallback.
+Expanding the registry is deferred until model size, quality, and download-time
+tradeoffs are evaluated.
+
 ## Next Checkpoint
 
 ### Extension Production Hardening
