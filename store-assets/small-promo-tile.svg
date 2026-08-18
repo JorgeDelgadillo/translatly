@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280">
+  <defs>
+    <linearGradient id="small-background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2eee4"/>
+      <stop offset="1" stop-color="#e4dbcc"/>
+    </linearGradient>
+    <filter id="small-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#112337" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <rect width="440" height="280" rx="24" fill="url(#small-background)"/>
+  <circle cx="22" cy="28" r="112" fill="#ed7259" opacity="0.1"/>
+  <text x="30" y="48" fill="#ed7259" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" letter-spacing="3">TRANSLATLY</text>
+  <text x="30" y="105" fill="#112337" font-family="Georgia, serif" font-size="31">Translation</text>
+  <text x="30" y="140" fill="#112337" font-family="Georgia, serif" font-size="31">that stays yours.</text>
+  <rect x="30" y="171" width="96" height="3" rx="1.5" fill="#ed7259"/>
+  <text x="30" y="202" fill="#536271" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="1">LOCAL MODELS</text>
+  <text x="30" y="224" fill="#536271" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="1">PRIVATE BY DESIGN</text>
+  <rect x="292" y="30" width="116" height="220" rx="27" fill="#112337" filter="url(#small-shadow)"/>
+  <path fill="#f2eee4" d="M307 74c0-13.255 10.745-24 24-24h37c13.255 0 24 10.745 24 24v18c0 13.255-10.745 24-24 24h-23l-17 13 4-13h-1c-13.255 0-24-10.745-24-24V74Z"/>
+  <rect x="324" y="70" width="42" height="7" rx="3.5" fill="#112337"/>
+  <rect x="324" y="84" width="28" height="7" rx="3.5" fill="#112337"/>
+  <path fill="#ed7259" d="M322 133c0-10.493 8.507-19 19-19h27c10.493 0 19 8.507 19 19v15c0 10.493-8.507 19-19 19h-15l-15 11 4-11h-1c-10.493 0-19-8.507-19-19V133Z"/>
+  <rect x="338" y="133" width="29" height="6" rx="3" fill="#f2eee4"/>
+  <rect x="338" y="145" width="20" height="6" rx="3" fill="#f2eee4"/>
+  <circle cx="381" cy="215" r="5" fill="#ed7259"/>
+</svg>
