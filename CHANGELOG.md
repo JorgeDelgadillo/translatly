@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.2] - 2026-08-18
+
+### Changed
+
+- Selecting text now shows a small translate icon instead of opening the translation bubble immediately; click the icon to translate, or use the right-click menu.
+
 ## [1.1.0] - 2026-08-17
 
 ### Added
