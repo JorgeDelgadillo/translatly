@@ -2,7 +2,7 @@
   "name": "translatly",
   "description": "Private, fully local translation extension for Chromium and Firefox",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.2",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": {
@@ -17,6 +17,7 @@
     "zip": "pnpm run setup:extension && wxt zip",
     "zip:firefox": "pnpm run setup:extension && wxt zip -b firefox",
     "check": "pnpm run setup:extension && svelte-check --tsconfig ./tsconfig.json",
+    "check:release": "node scripts/check-release-metadata.mjs",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "pnpm build && playwright test",

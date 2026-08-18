@@ -27,7 +27,7 @@ pnpm run setup:extension # copy local ORT WASM and generate WXT types
 pnpm dev              # dev mode with HMR (Chrome)
 pnpm dev:firefox      # dev mode with HMR (Firefox)
 pnpm build            # production build (Chrome MV3) -> .output/chrome-mv3
-pnpm build:firefox    # production build (Firefox)   -> .output/firefox-mv3
+pnpm build:firefox    # production build (Firefox)   -> .output/firefox-mv2
 pnpm zip              # package Chrome build for store upload
 pnpm zip:firefox      # package Firefox build for store upload
 pnpm check            # type-check Svelte + TypeScript
@@ -64,7 +64,7 @@ src/
 │  └─ offscreen/       # Chromium engine host
 └─ lib/                # engine, messaging, settings, and local history
 public/
-└─ icon/               # extension icons (placeholders for now)
+└─ icon/               # Translatly extension icons
 ```
 
 ## Conventions

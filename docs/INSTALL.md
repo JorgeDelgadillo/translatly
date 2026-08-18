@@ -6,20 +6,22 @@ published. They are not generated on pushes or pull requests.
 ## Chrome / Chromium
 
 1. Download the `translatly-<release>-chrome-mv3.zip` asset from the GitHub release.
-2. Extract the ZIP to a local directory.
-3. Open `chrome://extensions` (or the equivalent extensions page in your browser).
-4. Enable **Developer mode**.
-5. Select **Load unpacked** and choose the extracted directory.
+2. Optionally verify the archive against `SHA256SUMS.txt` from the same release.
+3. Extract the ZIP to a local directory.
+4. Open `chrome://extensions` (or the equivalent extensions page in your browser).
+5. Enable **Developer mode**.
+6. Select **Load unpacked** and choose the extracted directory.
 
 The unpacked installation is intended for local testing and development.
 
 ## Firefox
 
 1. Download the `translatly-<release>-firefox-mv2.zip` asset from the GitHub release.
-2. Extract the ZIP to a local directory.
-3. Open `about:debugging#/runtime/this-firefox`.
-4. Select **Load Temporary Add-on**.
-5. Choose the extracted `manifest.json` file.
+2. Optionally verify the archive against `SHA256SUMS.txt` from the same release.
+3. Extract the ZIP to a local directory.
+4. Open `about:debugging#/runtime/this-firefox`.
+5. Select **Load Temporary Add-on**.
+6. Choose the extracted `manifest.json` file.
 
 Temporary Firefox add-ons are removed when Firefox restarts. A signed,
 permanently installable AMO package remains part of the store-release phase.
