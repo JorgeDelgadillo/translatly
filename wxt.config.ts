@@ -4,6 +4,31 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-svelte'],
+  vite: ({ browser }) => ({
+    build: {
+      // Transformers.js is bundled as an IIFE for Firefox MV2. Its web build
+      // intentionally falls back to an empty import.meta object in that format.
+      rolldownOptions: {
+        transform: {
+          define: { 'import.meta': '{}' },
+        },
+      },
+      // The Chromium offscreen engine is ~527 kB after minification; keep the
+      // limit just above it so future unexpected growth remains visible.
+      ...(browser === 'chrome' ? { chunkSizeWarningLimit: 600 } : {}),
+    },
+  }),
+  hooks: {
+    'entrypoints:found': (wxt, entrypoints) => {
+      if (wxt.config.browser !== 'firefox') return;
+      // Firefox hosts the engine in its background page and does not need the
+      // Chromium-only offscreen document in the package.
+      const offscreenIndex = entrypoints.findIndex(
+        (entrypoint) => entrypoint.name === 'offscreen',
+      );
+      if (offscreenIndex !== -1) entrypoints.splice(offscreenIndex, 1);
+    },
+  },
   manifest: ({ browser, manifestVersion }) => {
     const name = 'Translatly';
     const description =

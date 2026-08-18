@@ -57,7 +57,7 @@ browser automatically).
 ```
 src/
 ├─ entrypoints/        # extension entrypoints (background, content, popup, ...)
-│  ├─ background.ts    # coordinator: queue, context menus, messaging
+│  ├─ background.ts    # coordinator; Firefox also hosts the engine
 │  ├─ content/         # selection translation bubble (Shadow DOM)
 │  ├─ popup/           # quick-translate popup (Svelte)
 │  ├─ translator/      # full-page translation desk (Svelte)

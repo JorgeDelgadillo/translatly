@@ -1,8 +1,8 @@
 import { browser } from 'wxt/browser';
-import { startEngineHost } from '@/lib/engine/engine-host';
 import {
   isEngineBroadcast,
   isEngineInternalMessage,
+  isModelManagerMessage,
   isOpenTranslatorMessage,
   isUiToEngineMessage,
   type EngineBroadcast,
@@ -82,6 +82,30 @@ function publishFirefoxBroadcast(message: EngineBroadcast): void {
   forwardToContentScripts(message);
 }
 
+/**
+ * The Firefox engine is loaded dynamically to keep it out of Chromium's
+ * service worker. Buffer engine messages synchronously so startup cannot lose
+ * a request while that local module is being evaluated.
+ */
+function startFirefoxEngine(): void {
+  const pendingMessages: unknown[] = [];
+  const bufferMessage = (message: unknown) => {
+    if (isUiToEngineMessage(message) || isModelManagerMessage(message)) {
+      pendingMessages.push(message);
+    }
+    return undefined;
+  };
+  browser.runtime.onMessage.addListener(bufferMessage);
+
+  void import('@/lib/engine/engine-host').then(({ startEngineHost }) => {
+    browser.runtime.onMessage.removeListener(bufferMessage);
+    startEngineHost({ onBroadcast: publishFirefoxBroadcast });
+    for (const message of pendingMessages) {
+      void browser.runtime.sendMessage(message).catch(() => {});
+    }
+  });
+}
+
 async function openTranslatorPage(message: OpenTranslatorMessage): Promise<void> {
   const context = { text: message.text, source: message.source, target: message.target };
   const contextId = await saveTranslatorContext(context);
@@ -143,6 +167,6 @@ export default defineBackground(() => {
   } else {
     // Firefox MV2 has no offscreen API: the persistent background page hosts
     // the engine itself and publishes results to extension pages and tabs.
-    startEngineHost({ onBroadcast: publishFirefoxBroadcast });
+    if (import.meta.env.FIREFOX) startFirefoxEngine();
   }
 });

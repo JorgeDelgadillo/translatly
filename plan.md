@@ -38,7 +38,7 @@ Acceptance criteria:
 - [x] Persisted preferences and history reject malformed values and recover safely.
 - [x] Selection-bubble request delivery and viewport positioning are reliable.
 - [x] Translation and model lifecycle behavior has targeted unit coverage.
-- Chromium and Firefox builds are verified with release metadata and manifest
+- [x] Chromium and Firefox builds are verified with release metadata and manifest
   checks.
 - [x] Real-model smoke verification is documented without adding large model
   files to continuous integration.
