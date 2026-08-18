@@ -1727,4 +1727,475 @@
       width: 100%;
     }
   }
+
+  /* Swiss minimal surface: the workspace stays dense and the editor leads. */
+  :global(:root) {
+    --canvas: #f6f8fa;
+    --ink: #151a21;
+    --accent: #315cff;
+    --paper: #ffffff;
+    --sage: #eef2ff;
+    --sand: #eef1f4;
+    --ambient-one: transparent;
+    --ambient-two: transparent;
+    --accent-soft: #e8edff;
+    --deep: #151a21;
+    --deep-text: #f3f5f7;
+    --deep-muted: #aeb8c4;
+    --line: #d7dee6;
+    --muted: #687381;
+  }
+
+  :global(:root[data-theme='dark']) {
+    --canvas: #11161d;
+    --ink: #f3f5f7;
+    --accent: #7d96ff;
+    --paper: #1a2029;
+    --sage: #202b4e;
+    --sand: #242c36;
+    --deep: #0d1117;
+    --deep-text: #f3f5f7;
+    --deep-muted: #aeb8c4;
+    --accent-soft: #202b4e;
+    --line: #46515e;
+    --muted: #aeb8c4;
+  }
+
+  .page-shell {
+    background: var(--canvas);
+  }
+
+  .ambient {
+    display: none;
+  }
+
+  .topbar,
+  main,
+  .page-footer {
+    width: min(1120px, calc(100% - 2.5rem));
+  }
+
+  .topbar {
+    padding: 1rem 0;
+    border-color: var(--line);
+  }
+
+  .brand-mark {
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 4px;
+    background: var(--accent);
+    color: transparent;
+    font-size: 0;
+  }
+
+  .brand-mark::before {
+    color: #ffffff;
+    content: 'T';
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .brand-mark span {
+    display: none;
+  }
+
+  .brand-name,
+  .brand-note,
+  .privacy-chip,
+  .settings-toggle,
+  .eyebrow,
+  .editor-meta,
+  .editor-footer,
+  .history-pair,
+  .history-date,
+  .page-footer,
+  .shortcut-hint,
+  .settings-note,
+  .local-stamp,
+  .select-field > span,
+  .language-select > span {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+
+  .brand-name {
+    font-size: 0.85rem;
+  }
+
+  .brand-note,
+  .privacy-chip,
+  .hero-copy,
+  .settings-note,
+  .select-field > span,
+  .language-select > span,
+  .editor-meta,
+  .editor-footer,
+  .action-status,
+  .history-pair,
+  .history-date,
+  .page-footer {
+    color: var(--muted) !important;
+  }
+
+  .topbar-actions {
+    gap: 0.5rem;
+  }
+
+  .settings-toggle {
+    gap: 0.4rem;
+    padding: 0.5rem 0.65rem;
+    border-color: var(--line);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .settings-toggle:hover,
+  .settings-toggle.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+  }
+
+  .settings-icon {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    font-size: 0;
+  }
+
+  main {
+    padding: 3rem 0 2.5rem;
+  }
+
+  .hero {
+    gap: 2rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .eyebrow {
+    margin-bottom: 0.65rem;
+    color: var(--accent) !important;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+  }
+
+  h1,
+  h2,
+  h3,
+  .empty-history p,
+  .history-text,
+  .local-panel h2,
+  .onboarding-content h2,
+  .onboarding-grid h3,
+  .editor-card textarea,
+  .result-text,
+  .output-placeholder {
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+  }
+
+  h1 {
+    max-width: 620px;
+    font-size: clamp(1.9rem, 3.8vw, 3rem);
+    line-height: 0.95;
+  }
+
+  h1 em,
+  h2 em {
+    color: var(--accent);
+    font-style: normal;
+  }
+
+  .hero-copy {
+    max-width: 280px;
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+
+  .settings-panel,
+  .workspace,
+  .history-panel,
+  .local-panel,
+  :global(.models-panel) {
+    border-color: var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    box-shadow: none;
+  }
+
+  .settings-panel,
+  :global(.models-panel) {
+    padding: 1.1rem 1.25rem 1.25rem;
+  }
+
+  .settings-heading h2,
+  .workspace-heading h2,
+  .section-heading h2,
+  :global(.models-panel h2) {
+    font-size: 1.35rem;
+    line-height: 1.05;
+  }
+
+  select {
+    border-color: var(--line);
+    border-radius: 4px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.18rem rgba(49, 92, 255, 0.14);
+  }
+
+  .workspace {
+    padding: 1.25rem;
+  }
+
+  .workspace-heading {
+    margin-bottom: 1.25rem;
+  }
+
+  kbd {
+    border-color: var(--line);
+    border-radius: 3px;
+    background: var(--surface, var(--sand));
+  }
+
+  .language-bar {
+    margin-bottom: 0.75rem;
+    padding: 0 0.25rem 0.75rem;
+    border-color: var(--line);
+  }
+
+  .language-select select {
+    padding: 0.5rem 0.6rem;
+    border-color: var(--line);
+    border-bottom-width: 1px;
+    border-radius: 4px;
+    background: var(--paper);
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.9rem;
+  }
+
+  .swap-button {
+    width: 2rem;
+    height: 2rem;
+    border-color: var(--line);
+    border-radius: 4px;
+    background: var(--surface, var(--sand));
+    color: var(--accent);
+    font-size: 1rem;
+  }
+
+  .editor-grid {
+    grid-template-columns: minmax(0, 1fr) 2rem minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .editor-card {
+    min-height: 18rem;
+    padding: 1rem;
+    border-color: var(--line);
+    border-radius: 4px;
+  }
+
+  .input-card {
+    background: var(--paper);
+  }
+
+  .output-card {
+    background: var(--sage);
+  }
+
+  .editor-card textarea,
+  .result-text,
+  .output-placeholder {
+    font-size: 1.12rem;
+    line-height: 1.45;
+  }
+
+  .flow-marker {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 4px;
+    background: var(--accent);
+  }
+
+  .action-row {
+    padding-top: 0.75rem;
+  }
+
+  .button {
+    min-height: 2.45rem;
+    border-radius: 4px;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .button-primary {
+    background: var(--accent);
+  }
+
+  .button-primary:hover:not(:disabled) {
+    background: var(--ink);
+    transform: none;
+  }
+
+  .button-dark {
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  .button-quiet {
+    border-color: var(--line);
+  }
+
+  .bottom-grid {
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .history-panel,
+  .local-panel {
+    padding: 1.25rem;
+  }
+
+  .empty-history {
+    min-height: 8rem;
+    border-color: var(--line);
+  }
+
+  .empty-history p,
+  .history-text {
+    color: var(--ink) !important;
+  }
+
+  .history-row {
+    border-color: var(--line);
+  }
+
+  .history-main:hover .history-text {
+    color: var(--accent) !important;
+  }
+
+  .delete-button:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .local-panel {
+    border-left: 3px solid var(--accent);
+    color: var(--ink);
+  }
+
+  .local-panel::after {
+    display: none;
+  }
+
+  .local-panel h2 {
+    color: var(--ink);
+    font-size: 1.75rem;
+    line-height: 1.05;
+  }
+
+  .local-panel .eyebrow {
+    color: var(--accent) !important;
+  }
+
+  .local-copy,
+  .onboarding-intro,
+  .onboarding-grid p {
+    color: var(--muted) !important;
+  }
+
+  .local-stamp {
+    color: var(--ink);
+  }
+
+  .stamp-line {
+    background: var(--accent);
+  }
+
+  .onboarding-dialog {
+    border-color: var(--line);
+    border-radius: 6px;
+    box-shadow: 0 1.5rem 4rem rgba(21, 26, 33, 0.2);
+  }
+
+  .onboarding-dialog::backdrop {
+    background: rgba(21, 26, 33, 0.48);
+    backdrop-filter: none;
+  }
+
+  .onboarding-content h2 {
+    max-width: 520px;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    line-height: 1;
+  }
+
+  .onboarding-grid article {
+    border-color: var(--line);
+  }
+
+  .onboarding-number {
+    color: var(--accent);
+  }
+
+  .onboarding-grid h3 {
+    color: var(--ink);
+    font-size: 1rem;
+  }
+
+  .page-footer {
+    padding: 1rem 0 1.4rem;
+    border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 800px) {
+    h1 {
+      font-size: clamp(2rem, 7vw, 2.8rem);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .topbar,
+    main,
+    .page-footer {
+      width: min(100% - 1.5rem, 640px);
+    }
+
+    main {
+      padding-top: 2rem;
+    }
+
+    .hero {
+      padding-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2.15rem;
+    }
+
+    .workspace,
+    .history-panel,
+    .local-panel {
+      padding: 0.9rem;
+    }
+
+    .editor-card {
+      min-height: 14rem;
+    }
+  }
 </style>

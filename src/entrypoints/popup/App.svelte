@@ -604,4 +604,167 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  /* Swiss minimal surface: compact type, strict borders, one signal color. */
+  .popup-shell {
+    --canvas: #f6f8fa;
+    --paper: #ffffff;
+    --surface: #eef1f4;
+    --ink: #151a21;
+    --muted: #687381;
+    --line: #d7dee6;
+    --accent: #315cff;
+    --accent-soft: #e8edff;
+    padding: 16px;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .header {
+    margin-bottom: 16px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    background: var(--accent);
+    color: transparent;
+    font-size: 0;
+  }
+
+  .brand-mark::before {
+    color: #ffffff;
+    content: 'T';
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .brand-mark span {
+    display: none;
+  }
+
+  h1 {
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+
+  .local-note,
+  .surface-label,
+  .language-field > span,
+  .editor-heading,
+  .editor-footer,
+  .result-heading,
+  .status {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    letter-spacing: 0.04em;
+  }
+
+  .surface-label {
+    color: var(--muted);
+  }
+
+  .language-bar {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  select {
+    border-radius: 4px;
+    background: var(--paper);
+  }
+
+  .swap {
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--accent);
+    font-size: 15px;
+  }
+
+  .editor-card,
+  .result-card {
+    border-radius: 6px;
+  }
+
+  .editor-heading span:first-child,
+  .copy-button,
+  .clear-button,
+  .full-page {
+    color: var(--accent);
+  }
+
+  textarea {
+    font-size: 15px;
+  }
+
+  .actions button {
+    border-radius: 4px;
+  }
+
+  .actions .primary {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  .actions .primary:hover:not(:disabled) {
+    background: var(--ink);
+  }
+
+  .result-card {
+    background: var(--accent-soft);
+  }
+
+  .status.error {
+    color: #b4233c;
+  }
+
+  button:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline-color: var(--accent);
+  }
+
+  :global(html[data-theme='dark']) .popup-shell {
+    --canvas: #11161d;
+    --paper: #1a2029;
+    --surface: #242c36;
+    --ink: #f3f5f7;
+    --muted: #aeb8c4;
+    --line: #46515e;
+    --accent: #7d96ff;
+    --accent-soft: #202b4e;
+  }
+
+  :global(html[data-theme='dark']) .brand-mark::before,
+  :global(html[data-theme='system']) .brand-mark::before {
+    color: #ffffff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme='system']) .popup-shell {
+      --canvas: #11161d;
+      --paper: #1a2029;
+      --surface: #242c36;
+      --ink: #f3f5f7;
+      --muted: #aeb8c4;
+      --line: #46515e;
+      --accent: #7d96ff;
+      --accent-soft: #202b4e;
+    }
+  }
+
+  @media (prefers-color-scheme: light) {
+    :global(html[data-theme='system']) .popup-shell {
+      --canvas: #f6f8fa;
+      --paper: #ffffff;
+      --surface: #eef1f4;
+      --ink: #151a21;
+      --muted: #687381;
+      --line: #d7dee6;
+      --accent: #315cff;
+      --accent-soft: #e8edff;
+    }
+  }
 </style>

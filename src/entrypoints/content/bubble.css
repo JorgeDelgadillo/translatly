@@ -368,3 +368,136 @@ button:focus-visible {
     animation-duration: 1.5s;
   }
 }
+
+/* Swiss minimal surface: compact utility panel with one blue action color. */
+.bubble {
+  --bubble-bg: #ffffff;
+  --bubble-surface: #eef1f4;
+  --bubble-result: #eef2ff;
+  --bubble-ink: #151a21;
+  --bubble-muted: #687381;
+  --bubble-line: #d7dee6;
+  --bubble-accent: #315cff;
+  --bubble-accent-soft: #e8edff;
+  border-radius: 6px;
+  box-shadow: 0 14px 36px rgba(21, 26, 33, 0.18), 0 2px 8px rgba(21, 26, 33, 0.1);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.bubble.dark {
+  --bubble-bg: #1a2029;
+  --bubble-surface: #242c36;
+  --bubble-result: #202b4e;
+  --bubble-ink: #f3f5f7;
+  --bubble-muted: #aeb8c4;
+  --bubble-line: #46515e;
+  --bubble-accent: #7d96ff;
+  --bubble-accent-soft: #202b4e;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bubble:not(.light) {
+    --bubble-bg: #1a2029;
+    --bubble-surface: #242c36;
+    --bubble-result: #202b4e;
+    --bubble-ink: #f3f5f7;
+    --bubble-muted: #aeb8c4;
+    --bubble-line: #46515e;
+    --bubble-accent: #7d96ff;
+    --bubble-accent-soft: #202b4e;
+  }
+}
+
+.top-accent {
+  height: 2px;
+  background: var(--bubble-accent);
+}
+
+.header {
+  padding: 10px 12px 9px;
+  border-bottom: 1px solid var(--bubble-line);
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--bubble-accent);
+  color: #ffffff;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.local-badge,
+.panel-label,
+.panel-hint,
+.footer-note {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.local-badge,
+.panel-label,
+.panel-hint,
+.footer-note {
+  letter-spacing: 0.04em;
+}
+
+.close {
+  border-radius: 4px;
+}
+
+.language-bar {
+  padding: 8px 12px;
+  border-color: var(--bubble-line);
+  background: var(--bubble-surface);
+}
+
+.language-chip.target,
+.panel-label {
+  color: var(--bubble-accent);
+}
+
+.translation-stack {
+  padding: 11px 12px 0;
+}
+
+.text-panel {
+  padding: 10px 11px;
+  border-radius: 4px;
+}
+
+.flow-divider {
+  height: 20px;
+}
+
+.flow-icon {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  color: var(--bubble-accent);
+}
+
+.action-button {
+  min-height: 29px;
+  border-radius: 4px;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.action-button:hover {
+  border-color: var(--bubble-accent);
+  background: var(--bubble-accent-soft);
+}
+
+.action-button.primary {
+  border-color: var(--bubble-accent);
+  background: var(--bubble-accent);
+}
+
+.error-text {
+  color: #b4233c;
+}
+
+button:focus-visible {
+  outline-color: var(--bubble-accent);
+}

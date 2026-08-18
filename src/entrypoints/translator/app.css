@@ -1,7 +1,7 @@
 :root {
-  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
-  color: #112337;
-  background: #f2eee4;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #151a21;
+  background: #f6f8fa;
   color-scheme: light dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -10,14 +10,14 @@
 }
 
 :root[data-theme='dark'] {
-  color: #f4f0e8;
-  background: #101a24;
+  color: #f3f5f7;
+  background: #11161d;
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme='system'] {
-    color: #f4f0e8;
-    background: #101a24;
+    color: #f3f5f7;
+    background: #11161d;
   }
 }
 
@@ -45,7 +45,7 @@ select {
 }
 
 :focus-visible {
-  outline: 3px solid #ed7259;
+  outline: 3px solid #315cff;
   outline-offset: 3px;
 }
 

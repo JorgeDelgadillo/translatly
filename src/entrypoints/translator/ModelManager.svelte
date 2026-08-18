@@ -518,4 +518,109 @@
       color: #f4f0e8;
     }
   }
+
+  /* Keep model management aligned with the compact workspace controls. */
+  .models-panel {
+    margin-bottom: 1.25rem;
+    padding: 1.1rem 1.25rem 1.25rem;
+    border-color: var(--line, #d7dee6);
+    border-radius: 6px;
+    background: var(--paper, #ffffff);
+    box-shadow: none;
+    color: var(--ink, #151a21);
+  }
+
+  .eyebrow,
+  .storage-summary,
+  .models-intro,
+  .model-copy > p,
+  .model-languages,
+  .model-status {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+
+  .eyebrow {
+    margin-bottom: 0.6rem;
+    color: var(--accent, #315cff);
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+  }
+
+  h2,
+  h3,
+  .storage-summary strong {
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: -0.035em;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 650;
+  }
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 650;
+  }
+
+  .storage-summary,
+  .models-intro,
+  .model-copy > p,
+  .model-languages,
+  .model-status {
+    color: var(--muted, #687381);
+  }
+
+  .storage-summary strong {
+    color: var(--ink, #151a21);
+    font-size: 1.35rem;
+    font-weight: 650;
+  }
+
+  .model-list,
+  .model-row {
+    border-color: var(--line, #d7dee6);
+  }
+
+  .model-kind {
+    border: 1px solid var(--line, #d7dee6);
+    border-radius: 4px;
+    background: var(--surface, #eef1f4);
+    color: var(--muted, #687381);
+  }
+
+  .model-kind.universal {
+    border-color: #b7c4ff;
+    background: var(--accent-soft, #e8edff);
+    color: var(--accent, #315cff);
+  }
+
+  .model-action {
+    min-width: 145px;
+  }
+
+  .model-button {
+    border-color: var(--accent, #315cff);
+    border-radius: 4px;
+    background: var(--accent, #315cff);
+    color: #ffffff;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.72rem;
+  }
+
+  .model-button.remove {
+    border-color: var(--line, #d7dee6);
+    background: transparent;
+    color: var(--ink, #151a21);
+  }
+
+  .progress-track {
+    border-radius: 2px;
+    background: var(--surface, #eef1f4);
+  }
+
+  .progress-track span {
+    border-radius: 2px;
+    background: var(--accent, #315cff);
+  }
 </style>
