@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "pnpm build && playwright test",
+    "test:smoke:model": "pnpm build && node scripts/smoke-real-model.mjs",
     "copy-ort-wasm": "node scripts/copy-ort-wasm.mjs",
     "setup:extension": "pnpm run copy-ort-wasm && wxt prepare"
   },

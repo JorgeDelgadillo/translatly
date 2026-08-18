@@ -35,7 +35,7 @@ Acceptance criteria:
 - Translation and model lifecycle behavior has targeted unit coverage.
 - Chromium and Firefox builds are verified with release metadata and manifest
   checks.
-- Real-model smoke verification is documented without adding large model files
-  to continuous integration.
+- [x] Real-model smoke verification is documented without adding large model
+  files to continuous integration.
 
 Do not begin another product direction until this checkpoint is reviewed.
