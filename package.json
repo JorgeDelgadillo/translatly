@@ -26,7 +26,7 @@
     "setup:extension": "pnpm run copy-ort-wasm && wxt prepare"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.1",
     "@tsconfig/svelte": "^5.0.8",
     "@wxt-dev/module-svelte": "^2.0.4",
     "svelte": "^5.53.7",
