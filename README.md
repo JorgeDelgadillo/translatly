@@ -78,3 +78,5 @@ public/
 All inference runs locally. The only network traffic is downloading translation
 models (from Hugging Face) on demand, and only when the user requests a new
 language pair. Translation history stays in local extension storage and is never synced.
+
+See the [Privacy Policy](./PRIVACY.md) for the complete data-handling disclosure.
