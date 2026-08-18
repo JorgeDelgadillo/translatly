@@ -24,6 +24,7 @@
   } from '@/lib/settings';
   import { languageLabel, translate, type MessageKey } from '@/lib/i18n';
   import { applyDocumentPreferences } from '@/lib/theme';
+  import { consumeTranslatorContext } from '@/lib/messaging/navigation';
 
   type Status =
     | { kind: 'idle' }
@@ -82,13 +83,15 @@
 
   onMount(async () => {
     const params = new URLSearchParams(window.location.search);
+    const contextId = params.get('context');
+    const context = contextId ? await consumeTranslatorContext(contextId).catch(() => undefined) : undefined;
     const [preferences, storedHistory] = await Promise.all([
       loadPreferences(),
       loadTranslationHistory(),
     ]);
 
-    const requestedSource = params.get('source') ?? preferences.source;
-    const requestedTarget = params.get('target') ?? preferences.target;
+    const requestedSource = context?.source ?? params.get('source') ?? preferences.source;
+    const requestedTarget = context?.target ?? params.get('target') ?? preferences.target;
     const validSource = requestedSource === AUTO_DETECT_CODE || LANGUAGES.some((language) => language.code === requestedSource)
       ? requestedSource
       : preferences.source;
@@ -102,9 +105,14 @@
     settingsTarget = preferences.target;
     locale = preferences.locale;
     theme = preferences.theme;
-    text = params.get('text') ?? '';
+    text = context?.text ?? '';
     history = storedHistory;
     loaded = true;
+    if (contextId) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('context');
+      window.history.replaceState({}, '', cleanUrl);
+    }
     if (!preferences.onboardingSeen) setTimeout(openOnboarding, 0);
   });
 

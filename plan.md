@@ -25,11 +25,11 @@ The next focus is extension production hardening before store submission.
 
 ### Extension Production Hardening
 
-Status: pending implementation.
+Status: in progress.
 
 Acceptance criteria:
 
-- User text is never written to URLs or diagnostic logs.
+- [x] User text is never written to URLs or diagnostic logs.
 - Persisted preferences and history reject malformed values and recover safely.
 - Selection-bubble request delivery and viewport positioning are reliable.
 - Translation and model lifecycle behavior has targeted unit coverage.
