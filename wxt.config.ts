@@ -64,10 +64,6 @@ export default defineConfig({
             },
           }
         : {}),
-      // The full translator is also the browser's new-tab surface.
-      chrome_url_overrides: {
-        newtab: 'translator.html',
-      },
     };
   },
 });

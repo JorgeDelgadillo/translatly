@@ -16,7 +16,7 @@ on your device.
 
 - Translate selected text with an inline bubble on any web page.
 - Translate quickly from the popup using saved language preferences.
-- Use a full new-tab translator with history, language detection, settings, themes, and model management.
+- Use a full-page translator with history, language detection, settings, themes, and model management.
 - Run inference locally with ONNX Runtime Web and quantized Transformers.js models.
 - Download model data on demand; translation text is never sent to a translation service.
 - Use the curated language set: English, Spanish, French, German, Italian, and Portuguese.
