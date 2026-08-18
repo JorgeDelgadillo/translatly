@@ -92,4 +92,35 @@ describe('translation queue', () => {
     );
     expect(translateMock).toHaveBeenCalledTimes(1);
   });
+
+  it('cancels queued and active model operations by request id', async () => {
+    const queue = new TranslationQueue();
+    let releaseActive!: () => void;
+    const activeStarted = vi.fn();
+    const activeFinished = new Promise<void>((resolve) => {
+      releaseActive = resolve;
+    });
+
+    queue.enqueueModelOperation(
+      async (signal) => {
+        activeStarted();
+        await new Promise<void>((resolve) => {
+          signal.addEventListener('abort', () => resolve(), { once: true });
+        });
+        releaseActive();
+      },
+      'active-download',
+    );
+    await vi.waitFor(() => expect(activeStarted).toHaveBeenCalledOnce());
+
+    const queuedCancel = vi.fn();
+    queue.enqueueModelOperation(async () => {
+      throw new Error('cancelled operation must not start');
+    }, 'queued-download', queuedCancel);
+
+    expect(queue.cancelModelOperation('queued-download')).toBe(true);
+    expect(queuedCancel).toHaveBeenCalledOnce();
+    expect(queue.cancelModelOperation('active-download')).toBe(true);
+    await activeFinished;
+  });
 });

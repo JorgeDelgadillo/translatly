@@ -27,6 +27,14 @@ export interface TranslateCancelAllMessage {
 export interface ModelDownloadRequestMessage {
   type: 'model:download';
   modelId: string;
+  requestId: string;
+}
+
+/** UI -> engine: cancel one queued or active model download. */
+export interface ModelCancelRequestMessage {
+  type: 'model:cancel';
+  modelId: string;
+  requestId: string;
 }
 
 /** UI -> engine: remove a model from the local Transformers.js cache. */
@@ -46,6 +54,7 @@ export type UiToEngineMessage =
   | TranslateCancelMessage
   | TranslateCancelAllMessage
   | ModelDownloadRequestMessage
+  | ModelCancelRequestMessage
   | ModelDeleteRequestMessage
   | ModelStatusRequestMessage;
 
@@ -88,6 +97,7 @@ export interface TranslateErrorMessage {
 export interface ModelProgressMessage {
   type: 'model:progress';
   modelId: string;
+  requestId: string;
   status: string;
   file?: string;
   progress?: number;
@@ -99,6 +109,7 @@ export interface ModelProgressMessage {
 export interface ModelReadyMessage {
   type: 'model:ready';
   modelId: string;
+  requestId: string;
   estimatedBytes: number;
 }
 
@@ -120,7 +131,9 @@ export interface ModelDeletedMessage {
 export interface ModelErrorMessage {
   type: 'model:error';
   modelId: string;
+  requestId?: string;
   error: string;
+  cancelled?: boolean;
 }
 
 export type EngineBroadcast =
@@ -166,6 +179,7 @@ export function isUiToEngineMessage(msg: unknown): msg is UiToEngineMessage {
     t === 'translate:cancel' ||
     t === 'translate:cancelAll' ||
     t === 'model:download' ||
+    t === 'model:cancel' ||
     t === 'model:delete' ||
     t === 'model:status:request'
   );
@@ -173,10 +187,19 @@ export function isUiToEngineMessage(msg: unknown): msg is UiToEngineMessage {
 
 export function isModelManagerMessage(
   msg: unknown,
-): msg is ModelDownloadRequestMessage | ModelDeleteRequestMessage | ModelStatusRequestMessage {
+): msg is
+  | ModelDownloadRequestMessage
+  | ModelCancelRequestMessage
+  | ModelDeleteRequestMessage
+  | ModelStatusRequestMessage {
   if (typeof msg !== 'object' || msg === null) return false;
   const t = (msg as { type?: unknown }).type;
-  return t === 'model:download' || t === 'model:delete' || t === 'model:status:request';
+  return (
+    t === 'model:download' ||
+    t === 'model:cancel' ||
+    t === 'model:delete' ||
+    t === 'model:status:request'
+  );
 }
 
 export function isModelBroadcast(msg: unknown): msg is ModelBroadcast {

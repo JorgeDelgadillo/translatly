@@ -103,3 +103,20 @@ test('renders a compact inline bubble for selected text and closes it outside', 
   await expect(bubbleHost).not.toBeAttached();
   await page.close();
 });
+
+test('cancels a model download and returns it to the not-installed state', async () => {
+  const page = await extensionPage('translator.html');
+  const modelsToggle = page.getByRole('button', { name: /Models|Modelos/ });
+  await modelsToggle.click();
+
+  const firstModel = page.locator('.model-row').first();
+  const downloadButton = firstModel.getByRole('button', { name: /Download|Descargar/ });
+  await expect(downloadButton).toBeEnabled({ timeout: 10_000 });
+  await downloadButton.click();
+
+  const cancelButton = firstModel.getByRole('button', { name: /Cancel|Cancelar/ });
+  await expect(cancelButton).toBeVisible();
+  await cancelButton.click();
+  await expect(firstModel).toContainText(/Not downloaded|No descargado/, { timeout: 10_000 });
+  await page.close();
+});

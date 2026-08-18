@@ -21,6 +21,13 @@ interface Job {
   controller: AbortController;
 }
 
+interface ModelOperation {
+  requestId: string;
+  controller: AbortController;
+  operation: (signal: AbortSignal) => Promise<void>;
+  onCancel?: () => void;
+}
+
 /**
  * Serial translation queue. Inference is single-threaded (WASM, no
  * SharedArrayBuffer in extension pages), so jobs are processed one at a time
@@ -30,7 +37,8 @@ interface Job {
 export class TranslationQueue {
   private readonly active = new Map<string, AbortController>();
   private readonly pending: Job[] = [];
-  private readonly modelOperations: Array<() => Promise<void>> = [];
+  private readonly modelOperations: ModelOperation[] = [];
+  private readonly activeModelOperations = new Map<string, AbortController>();
   private pumping = false;
 
   constructor(private readonly emit: BroadcastHandler = defaultBroadcast) {}
@@ -77,9 +85,28 @@ export class TranslationQueue {
   }
 
   /** Runs model cache operations in the same serial lane as inference. */
-  enqueueModelOperation(operation: () => Promise<void>): void {
-    this.modelOperations.push(operation);
+  enqueueModelOperation(
+    operation: (signal: AbortSignal) => Promise<void>,
+    requestId: string = crypto.randomUUID(),
+    onCancel?: () => void,
+  ): void {
+    this.modelOperations.push({ requestId, controller: new AbortController(), operation, onCancel });
     void this.pump();
+  }
+
+  cancelModelOperation(requestId: string): boolean {
+    const idx = this.modelOperations.findIndex((operation) => operation.requestId === requestId);
+    if (idx >= 0) {
+      const [operation] = this.modelOperations.splice(idx, 1);
+      operation.controller.abort();
+      operation.onCancel?.();
+      return true;
+    }
+
+    const controller = this.activeModelOperations.get(requestId);
+    if (!controller) return false;
+    controller.abort();
+    return true;
   }
 
   private async pump(): Promise<void> {
@@ -88,8 +115,13 @@ export class TranslationQueue {
     try {
       while (this.pending.length > 0 || this.modelOperations.length > 0) {
         if (this.pending.length === 0) {
-          const operation = this.modelOperations.shift() as () => Promise<void>;
-          await operation();
+          const operation = this.modelOperations.shift() as ModelOperation;
+          this.activeModelOperations.set(operation.requestId, operation.controller);
+          try {
+            await operation.operation(operation.controller.signal);
+          } finally {
+            this.activeModelOperations.delete(operation.requestId);
+          }
           continue;
         }
 

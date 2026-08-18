@@ -1,8 +1,14 @@
 import { browser } from 'wxt/browser';
 import { isModelBroadcast, type ModelBroadcast } from './protocol';
 
-export function requestModelDownload(modelId: string): void {
-  void browser.runtime.sendMessage({ type: 'model:download', modelId });
+export function requestModelDownload(modelId: string): string {
+  const requestId = crypto.randomUUID();
+  void browser.runtime.sendMessage({ type: 'model:download', modelId, requestId });
+  return requestId;
+}
+
+export function requestModelCancel(modelId: string, requestId: string): void {
+  void browser.runtime.sendMessage({ type: 'model:cancel', modelId, requestId });
 }
 
 export function requestModelDelete(modelId: string): void {

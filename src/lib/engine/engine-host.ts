@@ -37,12 +37,16 @@ function publishModelBroadcast(message: ModelBroadcast): void {
   void browser.runtime.sendMessage(message).catch(() => {});
 }
 
-function modelOptions(onProgress?: (progress: ModelDownloadProgress) => void) {
-  return { wasmBaseUrl: getDefaultWasmBaseUrl(), onProgress };
+function modelOptions(
+  signal?: AbortSignal,
+  onProgress?: (progress: ModelDownloadProgress) => void,
+) {
+  return { wasmBaseUrl: getDefaultWasmBaseUrl(), signal, onProgress };
 }
 
 async function handleModelRequest(
   message: ModelDownloadRequestMessage | ModelDeleteRequestMessage | ModelStatusRequestMessage,
+  signal: AbortSignal,
 ): Promise<void> {
   const descriptor: ModelDescriptor | undefined = getModelDescriptor(message.modelId);
   if (!descriptor) {
@@ -60,17 +64,18 @@ async function handleModelRequest(
         publishModelBroadcast({
           type: 'model:status',
           modelId: descriptor.modelId,
-          cached: await isModelCached(descriptor.modelId, modelOptions()),
+          cached: await isModelCached(descriptor.modelId, modelOptions(signal)),
           estimatedBytes: descriptor.estimatedBytes,
         });
         break;
       case 'model:download':
         await preloadModel(
           descriptor.modelId,
-          modelOptions((progress) =>
+          modelOptions(signal, (progress) =>
             publishModelBroadcast({
               type: 'model:progress',
               modelId: descriptor.modelId,
+              requestId: message.requestId,
               ...progress,
             }),
           ),
@@ -78,19 +83,23 @@ async function handleModelRequest(
         publishModelBroadcast({
           type: 'model:ready',
           modelId: descriptor.modelId,
+          requestId: message.requestId,
           estimatedBytes: descriptor.estimatedBytes,
         });
         break;
       case 'model:delete':
-        await removeModel(descriptor.modelId, modelOptions());
+        await removeModel(descriptor.modelId, modelOptions(signal));
         publishModelBroadcast({ type: 'model:deleted', modelId: descriptor.modelId });
         break;
     }
   } catch (error) {
+    const cancelled = signal.aborted || (error instanceof Error && error.name === 'AbortError');
     publishModelBroadcast({
       type: 'model:error',
       modelId: descriptor.modelId,
-      error: error instanceof Error ? error.message : String(error),
+      ...(message.type === 'model:download' ? { requestId: message.requestId } : {}),
+      error: cancelled ? 'cancelled' : error instanceof Error ? error.message : String(error),
+      cancelled,
     });
   }
 }
@@ -104,7 +113,24 @@ export function startEngineHost(options: EngineHostOptions = {}): void {
 
   browser.runtime.onMessage.addListener((msg: unknown) => {
     if (isModelManagerMessage(msg)) {
-      queue.enqueueModelOperation(() => handleModelRequest(msg));
+      if (msg.type === 'model:cancel') {
+        queue.cancelModelOperation(msg.requestId);
+        return undefined;
+      }
+
+      const requestId = msg.type === 'model:download' ? msg.requestId : crypto.randomUUID();
+      const onCancel =
+        msg.type === 'model:download'
+          ? () =>
+              publishModelBroadcast({
+                type: 'model:error',
+                modelId: msg.modelId,
+                requestId: msg.requestId,
+                error: 'cancelled',
+                cancelled: true,
+              })
+          : undefined;
+      queue.enqueueModelOperation((signal) => handleModelRequest(msg, signal), requestId, onCancel);
       return undefined;
     }
     if (!isUiToEngineMessage(msg)) return undefined;

@@ -27,11 +27,24 @@ export interface TranslateOptions {
 // requested, the previous model is disposed before the new one loads.
 const MAX_MODELS_IN_MEMORY = 1;
 const cache = new Map<string, TranslationPipeline>();
+const defaultFetch = env.fetch;
 
-function configureEnvironment(wasmBaseUrl: string): void {
+function createAbortError(): Error {
+  const error = new Error('The operation was aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+function configureEnvironment(wasmBaseUrl: string, signal?: AbortSignal): void {
   // Models come from the Hugging Face hub; nothing else may be loaded.
   env.allowLocalModels = false;
   env.allowRemoteModels = true;
+  env.fetch = signal
+    ? (input, init = {}) => {
+        if (signal.aborted) return Promise.reject(createAbortError());
+        return defaultFetch(input, { ...init, signal: init.signal ?? signal });
+      }
+    : defaultFetch;
   // The wasm backend options object is always present in browser builds; the
   // library types mark it optional and read-only, hence the assertion.
   const wasm = env.backends.onnx.wasm!;
@@ -54,7 +67,8 @@ async function getTranslator(
   modelId: string,
   options: TranslateOptions,
 ): Promise<TranslationPipeline> {
-  configureEnvironment(options.wasmBaseUrl);
+  configureEnvironment(options.wasmBaseUrl, options.signal);
+  if (options.signal?.aborted) throw createAbortError();
   const cached = cache.get(modelId);
   if (cached) return cached;
 
@@ -75,6 +89,10 @@ async function getTranslator(
     session_options: { graphOptimizationLevel: 'basic' },
     progress_callback: (progress) => options.onProgress?.(progress as ModelDownloadProgress),
   });
+  if (options.signal?.aborted) {
+    disposeTranslator(translator);
+    throw createAbortError();
+  }
   cache.set(modelId, translator);
   return translator;
 }
@@ -107,7 +125,15 @@ export async function translate(
 /** Downloads and warms a registered model in the engine host. */
 export async function preloadModel(modelId: string, options: TranslateOptions): Promise<void> {
   if (!getModelDescriptor(modelId)) throw new Error(`Unknown translation model: ${modelId}`);
-  await getTranslator(modelId, options);
+  const wasCached = await isModelCached(modelId, options);
+  try {
+    await getTranslator(modelId, options);
+  } catch (error) {
+    if (options.signal?.aborted && !wasCached) {
+      await removeModel(modelId, { ...options, signal: undefined }).catch(() => {});
+    }
+    throw error;
+  }
 }
 
 /** Checks the Transformers.js pipeline cache without loading model weights. */

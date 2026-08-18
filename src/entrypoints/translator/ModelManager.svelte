@@ -6,6 +6,7 @@
   import {
     onModelBroadcast,
     requestModelDelete,
+    requestModelCancel,
     requestModelDownload,
     requestModelStatus,
   } from '@/lib/messaging/models';
@@ -21,11 +22,13 @@
     | { status: 'ready'; estimatedBytes: number }
     | { status: 'not-installed'; estimatedBytes: number }
     | { status: 'downloading'; progress?: number; text: string }
+    | { status: 'cancelling' }
     | { status: 'deleting' }
     | { status: 'error'; text: string };
 
   let states = $state<Record<string, ModelState>>({});
   let activeModelId = $state<string | null>(null);
+  let activeRequestId = $state<string | null>(null);
 
   const storedBytes = $derived(
     MODEL_REGISTRY.reduce((total, model) => {
@@ -49,9 +52,10 @@
             status: message.cached ? 'ready' : 'not-installed',
             estimatedBytes: message.estimatedBytes,
           };
-          if (activeModelId === message.modelId) activeModelId = null;
+          if (activeModelId === message.modelId && activeRequestId === null) activeModelId = null;
           break;
         case 'model:progress':
+          if (activeRequestId !== message.requestId || states[message.modelId]?.status === 'cancelling') break;
           states[message.modelId] = {
             status: 'downloading',
             progress: message.progress,
@@ -64,6 +68,7 @@
             estimatedBytes: message.estimatedBytes,
           };
           if (activeModelId === message.modelId) activeModelId = null;
+          if (activeRequestId === message.requestId) activeRequestId = null;
           break;
         case 'model:deleted':
           states[message.modelId] = {
@@ -71,10 +76,15 @@
             estimatedBytes: modelById(message.modelId)?.estimatedBytes ?? 0,
           };
           if (activeModelId === message.modelId) activeModelId = null;
+          activeRequestId = null;
           break;
         case 'model:error':
-          states[message.modelId] = { status: 'error', text: message.error };
+          if (message.requestId && activeRequestId !== message.requestId) break;
+          states[message.modelId] = message.cancelled
+            ? { status: 'not-installed', estimatedBytes: modelById(message.modelId)?.estimatedBytes ?? 0 }
+            : { status: 'error', text: message.error };
           if (activeModelId === message.modelId) activeModelId = null;
+          if (!message.requestId || activeRequestId === message.requestId) activeRequestId = null;
           break;
       }
     });
@@ -95,12 +105,19 @@
     if (activeModelId) return;
     activeModelId = model.modelId;
     states[model.modelId] = { status: 'downloading', text: tx('startingDownload') };
-    requestModelDownload(model.modelId);
+    activeRequestId = requestModelDownload(model.modelId);
+  }
+
+  function cancelDownload(model: ModelDescriptor): void {
+    if (activeModelId !== model.modelId || !activeRequestId) return;
+    states[model.modelId] = { status: 'cancelling' };
+    requestModelCancel(model.modelId, activeRequestId);
   }
 
   function remove(model: ModelDescriptor): void {
     if (activeModelId || !window.confirm(tx('removeModelConfirm', { model: modelLabel(model) }))) return;
     activeModelId = model.modelId;
+    activeRequestId = null;
     states[model.modelId] = { status: 'deleting' };
     requestModelDelete(model.modelId);
   }
@@ -129,6 +146,7 @@
         ? state.text
         : state.progress.toFixed(0) + '% · ' + state.text;
     }
+    if (state.status === 'cancelling') return tx('cancelling');
     if (state.status === 'deleting') return tx('removingFiles');
     return state.text;
   }
@@ -182,11 +200,22 @@
             <button class="model-button remove" onclick={() => remove(model)} disabled={activeModelId !== null}>
               {tx('remove')}
             </button>
+          {:else if state?.status === 'downloading' && activeModelId === model.modelId}
+            <button class="model-button remove" onclick={() => cancelDownload(model)}>
+              {tx('cancel')}
+            </button>
           {:else}
             <button
               class="model-button"
               onclick={() => download(model)}
-              disabled={!state || activeModelId !== null || state.status === 'checking' || state.status === 'downloading' || state.status === 'deleting'}
+              disabled={
+                !state ||
+                activeModelId !== null ||
+                state.status === 'checking' ||
+                state.status === 'downloading' ||
+                state.status === 'cancelling' ||
+                state.status === 'deleting'
+              }
             >
               {tx('download')}
             </button>

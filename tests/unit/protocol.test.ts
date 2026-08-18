@@ -12,6 +12,7 @@ describe('typed message guards', () => {
   it('recognizes UI-to-engine messages by discriminant', () => {
     expect(isUiToEngineMessage({ type: 'translate:request' })).toBe(true);
     expect(isUiToEngineMessage({ type: 'model:delete' })).toBe(true);
+    expect(isUiToEngineMessage({ type: 'model:cancel' })).toBe(true);
     expect(isUiToEngineMessage({ type: 'unknown' })).toBe(false);
     expect(isUiToEngineMessage(null)).toBe(false);
   });
@@ -22,6 +23,7 @@ describe('typed message guards', () => {
     expect(isModelBroadcast({ type: 'model:ready' })).toBe(true);
     expect(isModelBroadcast({ type: 'translate:error' })).toBe(false);
     expect(isModelManagerMessage({ type: 'model:status:request' })).toBe(true);
+    expect(isModelManagerMessage({ type: 'model:cancel' })).toBe(true);
   });
 
   it('recognizes internal readiness and navigation messages', () => {
