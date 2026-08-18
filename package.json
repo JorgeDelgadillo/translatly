@@ -2,7 +2,7 @@
   "name": "translatly",
   "description": "Private, fully local translation extension for Chromium and Firefox",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.1.0",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": {
