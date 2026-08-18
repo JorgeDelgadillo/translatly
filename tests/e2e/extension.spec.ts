@@ -1,4 +1,5 @@
 import { test, expect, chromium, type BrowserContext, type Page } from '@playwright/test';
+import { createServer, type Server } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,6 +10,8 @@ const extensionPath = path.resolve('.output/chrome-mv3');
 let context: BrowserContext | undefined;
 let userDataDir: string;
 let extensionId: string;
+let contentServer: Server;
+let contentUrl: string;
 
 async function extensionPage(pagePath: string): Promise<Page> {
   const page = await context!.newPage();
@@ -17,6 +20,17 @@ async function extensionPage(pagePath: string): Promise<Page> {
 }
 
 test.beforeAll(async () => {
+  contentServer = createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html' });
+    response.end(
+      '<!doctype html><html><body><p id="selection">A private sentence selected on a local page.</p></body></html>',
+    );
+  });
+  await new Promise<void>((resolve) => contentServer.listen(0, '127.0.0.1', resolve));
+  const address = contentServer.address();
+  if (!address || typeof address === 'string') throw new Error('Could not start the content test server');
+  contentUrl = `http://127.0.0.1:${address.port}`;
+
   userDataDir = await mkdtemp(path.join(os.tmpdir(), 'translatly-e2e-'));
   context = await chromium.launchPersistentContext(userDataDir, {
     // Chromium extensions are not available in Playwright's headless shell.
@@ -35,6 +49,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await context?.close();
+  await new Promise<void>((resolve, reject) => contentServer.close((error) => (error ? reject(error) : resolve())));
   await rm(userDataDir, { recursive: true, force: true });
 });
 
@@ -66,5 +81,25 @@ test('renders the popup quick-translation surface with persisted preferences', a
   await expect(page.locator('.pickers label').nth(1).locator('select')).toHaveValue('es');
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.close();
+});
+
+test('renders a compact inline bubble for selected text and closes it outside', async () => {
+  const page = await context!.newPage();
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto(contentUrl);
+  await page.locator('#selection').selectText();
+  await page.evaluate(() => document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })));
+
+  const bubbleHost = page.locator('#translatly-bubble-host');
+  await expect(bubbleHost).toBeAttached();
+  const box = await bubbleHost.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+
+  await page.mouse.click(350, 620);
+  await expect(bubbleHost).not.toBeAttached();
   await page.close();
 });
