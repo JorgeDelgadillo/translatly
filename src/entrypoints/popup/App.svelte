@@ -21,9 +21,10 @@
   let target = $state('es');
   let locale = $state<Locale>('en');
   let theme = $state<ThemePreference>('system');
-  let text = $state('Hello, how are you?');
+  let text = $state('');
   let result = $state('');
   let resultPair = $state<{ source: string; target: string } | null>(null);
+  let activePair = $state<{ source: string; target: string } | null>(null);
   let status = $state<Status>({ kind: 'idle' });
   let busy = $state(false);
   let copied = $state(false);
@@ -52,17 +53,15 @@
     loaded = true;
   });
 
-  // Keep the target valid for the chosen source and persist defaults.
   $effect(() => {
     if (!loaded) return;
     if (availableTargets.length > 0 && !availableTargets.includes(target)) {
       target = availableTargets[0]!;
-      return; // re-run after target is corrected, then persist
+      return;
     }
     void savePreferences({ source, target, locale, theme });
   });
 
-  // Subscribe to engine broadcasts and correlate with the active request.
   $effect(() => {
     const off = onEngineBroadcast((msg) => {
       if (currentRequestId == null || msg.requestId !== currentRequestId) return;
@@ -81,7 +80,8 @@
           break;
         case 'translate:result':
           result = msg.translation;
-          resultPair = { source, target };
+          resultPair = activePair;
+          activePair = null;
           status = { kind: 'idle' };
           busy = false;
           currentRequestId = null;
@@ -92,6 +92,7 @@
             kind: 'error',
             text: msg.cancelled ? tx('cancelled') : msg.error || tx('translationFailed'),
           };
+          activePair = null;
           busy = false;
           currentRequestId = null;
           break;
@@ -112,6 +113,7 @@
     result = '';
     resultPair = null;
     copied = false;
+    activePair = { source, target };
     const id = sendTranslateRequest(text, source, target);
     currentRequestId = id;
     busy = true;
@@ -149,15 +151,22 @@
   }
 </script>
 
-<main aria-labelledby="popup-title">
-  <header>
-    <h1 id="popup-title">Translatly</h1>
+<main class="popup-shell" aria-labelledby="popup-title">
+  <header class="header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">T<span>.</span></span>
+      <div>
+        <h1 id="popup-title">Translatly</h1>
+        <span class="local-note"><span aria-hidden="true"></span>{tx('inferenceLocal')}</span>
+      </div>
+    </div>
+    <span class="surface-label">{tx('localDesk')}</span>
   </header>
 
-  <div class="pickers">
-    <label>
+  <div class="language-bar" aria-label={tx('language')}>
+    <label class="language-field">
       <span>{tx('from')}</span>
-      <select bind:value={source}>
+      <select bind:value={source} disabled={busy}>
         {#each LANGUAGES as lang (lang.code)}
           <option value={lang.code}>{localizedLanguageName(lang.code)}</option>
         {/each}
@@ -168,9 +177,9 @@
       ⇄
     </button>
 
-    <label>
+    <label class="language-field">
       <span>{tx('to')}</span>
-      <select bind:value={target} disabled={availableTargets.length === 0}>
+      <select bind:value={target} disabled={busy || availableTargets.length === 0}>
         {#each availableTargets as code (code)}
           <option value={code}>{localizedLanguageName(code)}</option>
         {/each}
@@ -178,37 +187,48 @@
     </label>
   </div>
 
-  <label class="field">
-    <span>{localizedLanguageName(source)}</span>
+  <section class="editor-card" aria-labelledby="input-title">
+    <div class="editor-heading">
+      <span id="input-title">{localizedLanguageName(source)}</span>
+      <span>{text.length}/5000</span>
+    </div>
     <textarea
       bind:value={text}
-      rows="3"
+      rows="5"
+      maxlength="5000"
       aria-label={tx('textToTranslate')}
       placeholder={tx('textPlaceholder')}
-      onkeydown={(e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-          e.preventDefault();
+      onkeydown={(event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+          event.preventDefault();
           runTranslate();
         }
       }}
     ></textarea>
-  </label>
+    <div class="editor-footer">
+      <span><span class="privacy-dot" aria-hidden="true"></span>{tx('staysOnDevice')}</span>
+      {#if text}
+        <button class="clear-button" onclick={() => (text = '')}>{tx('clear')}</button>
+      {/if}
+    </div>
+  </section>
 
   <div class="actions">
     <button class="primary" onclick={runTranslate} disabled={busy || !text.trim()}>
       {busy ? tx('working') : tx('translate')}
+      <span aria-hidden="true">↗</span>
     </button>
     {#if busy}
-      <button onclick={cancel}>{tx('cancel')}</button>
+      <button class="quiet" onclick={cancel}>{tx('cancel')}</button>
     {/if}
-    <button class="secondary" onclick={openFullTranslator}>{tx('openFullTranslator')}</button>
+    <button class="full-page" onclick={openFullTranslator}>{tx('openFullTranslator')}</button>
   </div>
 
   {#if result && resultPair}
-    <section class="result" aria-live="polite">
-      <div class="result-head">
-        <span class="pair">{localizedLanguageName(resultPair.source)} → {localizedLanguageName(resultPair.target)}</span>
-        <button class="small" onclick={copyResult}>{copied ? tx('copied') : tx('copy')}</button>
+    <section class="result-card" aria-live="polite" aria-labelledby="result-title">
+      <div class="result-heading">
+        <span id="result-title">{localizedLanguageName(resultPair.source)} <b aria-hidden="true">→</b> {localizedLanguageName(resultPair.target)}</span>
+        <button class="copy-button" onclick={copyResult}>{copied ? tx('copied') : tx('copy')}</button>
       </div>
       <p>{result}</p>
     </section>
@@ -222,152 +242,366 @@
 </main>
 
 <style>
-  main {
+  .popup-shell {
+    --canvas: #f2eee4;
+    --paper: #fffdf8;
+    --surface: #ebe5d7;
+    --ink: #112337;
+    --muted: #6d7b7c;
+    --line: #d1d8d1;
+    --accent: #ed7259;
+    --accent-soft: #f7ddd5;
+    width: 380px;
+    min-height: 470px;
+    box-sizing: border-box;
+    padding: 16px;
+    background: var(--canvas);
+    color: var(--ink);
+  }
+
+  .header,
+  .brand,
+  .local-note,
+  .language-bar,
+  .editor-heading,
+  .editor-footer,
+  .actions,
+  .result-heading {
     display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.9rem;
-    min-width: 340px;
+    align-items: center;
   }
 
-  header h1 {
-    margin: 0;
-    font-size: 1.1rem;
+  .header {
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
   }
 
-  .pickers {
+  .brand {
+    gap: 9px;
+  }
+
+  .brand-mark {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 0.4rem;
-    align-items: end;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: Georgia, serif;
+    font-size: 17px;
+    font-weight: 700;
   }
 
-  .pickers label {
+  .brand-mark span {
+    color: var(--accent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+  }
+
+  .local-note {
+    gap: 5px;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 9px;
+  }
+
+  .local-note span,
+  .privacy-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4e9b79;
+    box-shadow: 0 0 0 3px rgba(78, 155, 121, 0.14);
+  }
+
+  .surface-label {
+    color: var(--accent);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .language-bar {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .language-field {
     display: flex;
+    min-width: 0;
+    flex: 1;
     flex-direction: column;
-    gap: 0.2rem;
-    font-size: 0.75rem;
-    opacity: 0.8;
+    gap: 5px;
   }
 
-  .pickers select,
-  .field textarea {
+  .language-field > span,
+  .editor-heading,
+  .editor-footer,
+  .result-heading,
+  .status {
+    color: var(--muted);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  select,
+  textarea,
+  button {
     font: inherit;
-    padding: 0.4rem 0.5rem;
-    border-radius: 6px;
-    border: 1px solid #555;
-    background: transparent;
-    color: inherit;
   }
 
-  .pickers select:disabled {
-    opacity: 0.5;
+  select {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 9px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    outline: none;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 12px;
   }
 
   .swap {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
     align-self: end;
-    padding: 0.4rem 0.6rem;
-    border-radius: 6px;
-    border: 1px solid #555;
-    background: transparent;
-    color: inherit;
-    font-size: 1rem;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--ink);
     cursor: pointer;
+    font-size: 17px;
   }
 
-  .swap:disabled {
-    opacity: 0.5;
-    cursor: default;
+  .editor-card,
+  .result-card {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--paper);
   }
 
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    opacity: 0.8;
+  .editor-card {
+    padding: 12px;
   }
 
-  .field textarea {
+  .editor-heading {
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .editor-heading span:first-child {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 130px;
+    box-sizing: border-box;
     resize: vertical;
-    min-height: 3.2rem;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  textarea::placeholder {
+    color: #a0aaa4;
+  }
+
+  .editor-footer {
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
+  }
+
+  .editor-footer > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .clear-button,
+  .full-page,
+  .copy-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .actions {
-    display: flex;
-    gap: 0.4rem;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 12px 0;
   }
 
-  button {
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    border: 1px solid #555;
-    background: transparent;
-    color: inherit;
-    font: inherit;
+  .actions button {
+    min-height: 34px;
+    padding: 8px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
     cursor: pointer;
+    font-size: 11px;
   }
 
-  button:disabled {
+  .actions .primary {
+    flex: 1;
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fffdf8;
+    font-weight: 700;
+  }
+
+  .actions .quiet {
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .actions .full-page {
+    border: 0;
+    color: var(--accent);
+  }
+
+  button:hover:not(:disabled),
+  .clear-button:hover,
+  .full-page:hover,
+  .copy-button:hover {
+    filter: brightness(0.95);
+  }
+
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
     opacity: 0.5;
-    cursor: default;
   }
 
-  button.primary {
-    background: #2a6fdb;
-    border-color: #2a6fdb;
-    color: white;
+  .result-card {
+    padding: 12px;
+    background: #edf5ef;
   }
 
-  button.primary:disabled {
-    background: #555;
-    border-color: #555;
-  }
-
-  button.secondary {
-    margin-left: auto;
-    border-color: #2a6fdb;
-    color: #2a6fdb;
-  }
-
-  button.secondary:hover {
-    background: rgba(42, 111, 219, 0.1);
-  }
-
-  button.small {
-    padding: 0.15rem 0.5rem;
-    font-size: 0.75rem;
-  }
-
-  .result {
-    border: 1px solid #333;
-    border-radius: 6px;
-    padding: 0.6rem;
-  }
-
-  .result-head {
-    display: flex;
+  .result-heading {
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.3rem;
-    font-size: 0.75rem;
-    opacity: 0.7;
+    gap: 8px;
   }
 
-  .result p {
-    margin: 0;
+  .result-heading b {
+    color: var(--accent);
+    font-weight: 400;
+  }
+
+  .result-card p {
+    margin: 10px 0 0;
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.5;
     white-space: pre-wrap;
   }
 
   .status {
     margin: 0;
-    font-size: 0.75rem;
-    opacity: 0.7;
-    word-break: break-word;
+    line-height: 1.5;
   }
 
   .status.error {
-    color: #e57373;
-    opacity: 1;
+    color: #b44f43;
+  }
+
+  :global(html[data-theme='dark']) .popup-shell {
+    --canvas: #101a24;
+    --paper: #182733;
+    --surface: #26343d;
+    --ink: #f4f0e8;
+    --muted: #b2c0bd;
+    --line: #50636b;
+    --accent: #ff947c;
+    --accent-soft: #4a2d2d;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :global(html[data-theme='system']) .popup-shell {
+      --canvas: #f2eee4;
+      --paper: #fffdf8;
+      --surface: #ebe5d7;
+      --ink: #112337;
+      --muted: #6d7b7c;
+      --line: #d1d8d1;
+      --accent: #ed7259;
+      color-scheme: light;
+    }
+  }
+
+  :global(html[data-theme='dark']) .result-card {
+    background: #1d3836;
+  }
+
+  :global(html[data-theme='light']) .popup-shell {
+    color-scheme: light;
+  }
+
+  :global(html[data-theme='dark']) .popup-shell {
+    color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(html[data-theme='system']) .popup-shell {
+      --canvas: #101a24;
+      --paper: #182733;
+      --surface: #26343d;
+      --ink: #f4f0e8;
+      --muted: #b2c0bd;
+      --line: #50636b;
+      --accent: #ff947c;
+      --accent-soft: #4a2d2d;
+      color-scheme: dark;
+    }
+
+    :global(html[data-theme='system']) .result-card {
+      background: #1d3836;
+    }
+  }
+
+  button:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 380px) {
+    .popup-shell {
+      width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 </style>

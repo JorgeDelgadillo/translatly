@@ -69,6 +69,11 @@ test('opens the private desk, completes onboarding, and changes preferences', as
 
   await page.locator('.appearance-form label').filter({ hasText: 'Tema' }).locator('select').selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('button', { name: /Models|Modelos/ }).click();
+  await expect(page.locator('#models-panel')).toBeVisible();
+  await expect(page.locator('#settings-panel')).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#models-panel')).toBeHidden();
   await page.close();
 });
 
@@ -77,8 +82,8 @@ test('renders the popup quick-translation surface with persisted preferences', a
 
   await expect(page.getByRole('heading', { name: 'Translatly' })).toBeVisible();
   await expect(page.getByLabel('Texto para traducir')).toBeVisible();
-  await expect(page.locator('.pickers label').nth(0).locator('select')).toHaveValue('en');
-  await expect(page.locator('.pickers label').nth(1).locator('select')).toHaveValue('es');
+  await expect(page.locator('.language-bar label').nth(0).locator('select')).toHaveValue('en');
+  await expect(page.locator('.language-bar label').nth(1).locator('select')).toHaveValue('es');
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.close();

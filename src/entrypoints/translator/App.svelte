@@ -301,6 +301,23 @@
     }
   }
 
+  function toggleSettings(): void {
+    settingsOpen = !settingsOpen;
+    if (settingsOpen) modelsOpen = false;
+  }
+
+  function toggleModels(): void {
+    modelsOpen = !modelsOpen;
+    if (modelsOpen) settingsOpen = false;
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && !onboardingDialog?.open) {
+      settingsOpen = false;
+      modelsOpen = false;
+    }
+  }
+
   async function completeOnboarding(): Promise<void> {
     await savePreferences({ onboardingSeen: true });
     onboardingDialog?.close();
@@ -310,6 +327,8 @@
     await savePreferences({ locale, theme });
   }
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <svelte:head>
   <title>{tx('appTitle')}</title>
@@ -334,7 +353,7 @@
       <button
         class:active={settingsOpen}
         class="settings-toggle"
-        onclick={() => (settingsOpen = !settingsOpen)}
+        onclick={toggleSettings}
         aria-expanded={settingsOpen}
         aria-controls="settings-panel"
       >
@@ -344,7 +363,7 @@
       <button
         class:active={modelsOpen}
         class="settings-toggle"
-        onclick={() => (modelsOpen = !modelsOpen)}
+        onclick={toggleModels}
         aria-expanded={modelsOpen}
         aria-controls="models-panel"
       >
@@ -510,6 +529,7 @@
             bind:value={text}
             onkeydown={handleEditorKeydown}
             aria-label={tx('textToTranslate')}
+            aria-keyshortcuts="Control+Enter Meta+Enter"
             placeholder={tx('textPlaceholder')}
             maxlength="5000"
           ></textarea>
