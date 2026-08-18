@@ -1,82 +1,162 @@
 # Translatly
 
-Private, fully local translation extension for Chromium-based browsers and Firefox.
-Translates the curated language set locally using neural models that run 100% in
-your browser — no servers, no tracking, no data leaving your device.
+[![Tests](https://github.com/JorgeDelgadillo/translatly/actions/workflows/tests.yml/badge.svg)](https://github.com/JorgeDelgadillo/translatly/actions/workflows/tests.yml)
+[![Latest release](https://img.shields.io/github/v/release/JorgeDelgadillo/translatly)](https://github.com/JorgeDelgadillo/translatly/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-ed7259.svg)](./LICENSE)
+
+Privacy-first translation for the browser. Translatly runs quantized neural
+translation models locally in Chromium and Firefox, so translation text stays
+on your device.
+
+<p align="center">
+  <img src="store-assets/screenshot-translator.png" alt="Translatly full translator workspace" width="900">
+</p>
 
 ## Features
 
-- **Selection translation**: translate selected text on any page via a floating bubble.
-- **Quick translations**: popup with instant translation between your default languages.
-- **Full translator**: local new-tab workspace with history, settings, and default language controls.
-- **Curated languages**: English, Spanish, French, German, Italian, and Portuguese.
-- Small local models (ONNX, quantized) designed to work on machines with integrated
-  GPUs and low VRAM. WASM by default, WebGPU as opt-in acceleration. Four direct
-  OPUS-MT routes are available; other curated pairs use the optional NLLB fallback.
+- Translate selected text with an inline bubble on any web page.
+- Translate quickly from the popup using saved language preferences.
+- Use a full new-tab translator with history, language detection, settings, themes, and model management.
+- Run inference locally with ONNX Runtime Web and quantized Transformers.js models.
+- Download model data on demand; translation text is never sent to a translation service.
+- Use the curated language set: English, Spanish, French, German, Italian, and Portuguese.
+- Use direct OPUS-MT models for English<->Spanish and English<->French, with the NLLB fallback for the remaining curated pairs.
+- Run Chromium MV3 and Firefox MV2 builds from one WXT codebase.
+
+## Model Downloads
+
+Model files are not committed to this repository. They are downloaded only when
+you request a route:
+
+- Direct OPUS-MT routes use compact pair models such as [`Xenova/opus-mt-en-es`](https://huggingface.co/Xenova/opus-mt-en-es).
+- Other curated language pairs use [`Xenova/nllb-200-distilled-600M`](https://huggingface.co/Xenova/nllb-200-distilled-600M) as the local fallback.
+
+Review the license and terms on each model card before redistributing model
+files. The MIT license in this repository applies to Translatly source code,
+not to third-party models or dependencies.
+
+## Screenshots
+
+<p align="center">
+  <img src="store-assets/screenshot-popup.png" alt="Translatly quick translation popup" width="900">
+</p>
+
+<p align="center">
+  <img src="store-assets/screenshot-selection-bubble.png" alt="Translatly selection translation bubble" width="900">
+</p>
+
+Additional Chrome Web Store assets are available in [`store-assets/`](./store-assets/).
+
+## Privacy
+
+Translatly handles text only after you explicitly request a translation. Text,
+results, and history stay on the device. The only network access is downloading
+model data from Hugging Face when you request a model; the extension does not
+send translation text, use telemetry, or load remote executable code.
+
+Read the complete [Privacy Policy](./PRIVACY.md).
 
 ## Requirements
 
-- Node.js >= 22
-- pnpm >= 10
+- Node.js 22 or newer
+- pnpm 10 or newer
+- Chromium or Firefox for running the extension
+- A graphical Chromium session for the optional real-model smoke test
 
 ## Development
 
+Install dependencies and prepare the generated extension assets and WXT types:
+
 ```sh
-pnpm install          # install dependencies
-pnpm run setup:extension # copy local ORT WASM and generate WXT types
-pnpm dev              # dev mode with HMR (Chrome)
-pnpm dev:firefox      # dev mode with HMR (Firefox)
-pnpm build            # production build (Chrome MV3) -> .output/chrome-mv3
-pnpm build:firefox    # production build (Firefox)   -> .output/firefox-mv2
-pnpm zip              # package Chrome build for store upload
-pnpm zip:firefox      # package Firefox build for store upload
-pnpm check            # type-check Svelte + TypeScript
-pnpm test:unit        # run unit tests with Vitest
-pnpm test:e2e         # build Chrome extension and run Playwright smoke tests
+pnpm install
+pnpm run setup:extension
 ```
 
-The first e2e run may require the Playwright browser binary:
+Start development mode:
+
+```sh
+pnpm dev              # Chromium MV3
+pnpm dev:firefox      # Firefox MV2
+```
+
+Load the generated unpacked extension from `.output/chrome-mv3` or
+`.output/firefox-mv2` when WXT does not open the browser automatically.
+
+Useful checks and packages:
+
+```sh
+pnpm check
+pnpm test:unit
+pnpm test:e2e
+pnpm build
+pnpm build:firefox
+pnpm zip
+pnpm zip:firefox
+```
+
+The first Playwright run may require the browser binary:
 
 ```sh
 pnpm exec playwright install chromium
 ```
 
-Release packages are generated only by GitHub Actions when a GitHub release is
-published. See the [manual installation guide](docs/INSTALL.md) for Chrome and
-Firefox.
+The real-model smoke test is intentionally manual because it downloads a
+production model:
 
-The test workflow runs `pnpm check`, unit tests, and Playwright e2e tests on
-every commit pushed to `main` and on pull requests targeting `main`. It does not
-generate release packages.
-
-After `pnpm dev`, load the extension from `.output/chrome-mv3` (or let WXT open the
-browser automatically).
-
-## Project structure
-
-```
-src/
-├─ entrypoints/        # extension entrypoints (background, content, popup, ...)
-│  ├─ background.ts    # coordinator; Firefox also hosts the engine
-│  ├─ content/         # selection translation bubble (Shadow DOM)
-│  ├─ popup/           # quick-translate popup (Svelte)
-│  ├─ translator/      # full-page translation desk (Svelte)
-│  └─ offscreen/       # Chromium engine host
-└─ lib/                # engine, messaging, settings, and local history
-public/
-└─ icon/               # Translatly extension icons
+```sh
+pnpm test:smoke:model
 ```
 
-## Conventions
+See [`docs/REAL-MODEL-SMOKE.md`](./docs/REAL-MODEL-SMOKE.md) for requirements
+and timeout options.
 
-- All repository artifacts (code, comments, commits, docs) are written in English.
-- pnpm is the only package manager.
-- See [AGENTS.md](./AGENTS.md) for architecture decisions and workflow.
+## Installation
 
-## Privacy
+Release packages are generated by GitHub Actions when a GitHub Release is
+published. Download the Chrome or Firefox package from the release assets and
+follow the [manual installation guide](./docs/INSTALL.md).
 
-All inference runs locally. The only network traffic is downloading translation
-models (from Hugging Face) on demand, and only when the user requests a new
-language pair. Translation history stays in local extension storage and is never synced.
+For private Chrome Web Store testing, upload the Chrome package in the
+[Developer Dashboard](https://chrome.google.com/webstore/devconsole/), set
+visibility to **Private**, and add trusted tester accounts.
 
-See the [Privacy Policy](./PRIVACY.md) for the complete data-handling disclosure.
+## Architecture
+
+```text
+Popup / translator / content bubble
+        |
+        v
+Background coordinator
+        |
+        +--> Chromium MV3 offscreen engine host
+        |
+        +--> Firefox MV2 background engine host
+        |
+        v
+Serial translation and model queue
+        |
+        v
+Local Transformers.js + ONNX Runtime Web
+```
+
+The extension has three user surfaces:
+
+- `src/entrypoints/popup`: quick translations.
+- `src/entrypoints/translator`: the full translation workspace.
+- `src/entrypoints/content`: the Shadow DOM selection bubble.
+
+The engine, messaging, storage, language registry, and model lifecycle code live
+in `src/lib/`. Chromium and Firefox share the same product code while using the
+platform-specific engine host required by each manifest version.
+
+## Contributing
+
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request. Please
+keep changes focused, run the relevant checks, and never commit downloaded
+models, generated build output, credentials, or store secrets.
+
+Report security issues privately using the process in [SECURITY.md](./SECURITY.md).
+
+## License
+
+Translatly is released under the [MIT License](./LICENSE).

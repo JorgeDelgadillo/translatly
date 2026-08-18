@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a reproducible problem with Translatly
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove private text, model files, credentials, and tokens from all examples and logs.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chromium 128 or Firefox 128
+    validations:
+      required: true
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version or commit
+      placeholder: 1.1.0 or commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: Describe the smallest sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Include redacted console output or screenshots when useful.

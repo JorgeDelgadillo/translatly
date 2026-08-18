@@ -17,10 +17,10 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Phase 4 ships the WASM backend only. The `jsep` (WebGPU) and `jspi` (JS
-// promise integration) variants will be added when their backends are wired
-// up in a later phase. We ship the threaded base build plus the asyncify
-// variant that transformers.js v4 selects for proxied/worker inference.
+// The extension currently ships the WASM backend only. The `jsep` (WebGPU) and
+// `jspi` (JS promise integration) variants are not wired into the extension.
+// Ship the threaded base build plus the asyncify variant that transformers.js
+// v4 selects for proxied/worker inference.
 const ORT_ARTIFACTS = [
   'ort-wasm-simd-threaded.wasm',
   'ort-wasm-simd-threaded.mjs',

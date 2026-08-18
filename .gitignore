@@ -16,10 +16,6 @@ stats-*.json
 playwright-report
 test-results
 web-ext.config.ts
-.agents
-skills-lock.json
-AGENTS.md
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
