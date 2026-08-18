@@ -1,0 +1,29 @@
+.trigger {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 5px;
+  background: #315cff;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(21, 26, 33, 0.22), 0 1px 3px rgba(21, 26, 33, 0.16);
+  cursor: pointer;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1;
+}
+
+.trigger:hover {
+  filter: brightness(0.96);
+}
+
+.trigger:focus-visible {
+  outline: 3px solid #315cff;
+  outline-offset: 2px;
+}
+
+.mark {
+  font-size: 16px;
+  font-weight: 800;
+}

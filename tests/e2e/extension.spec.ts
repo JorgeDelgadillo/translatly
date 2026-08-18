@@ -89,12 +89,18 @@ test('renders the popup quick-translation surface with persisted preferences', a
   await page.close();
 });
 
-test('renders a compact inline bubble for selected text and closes it outside', async () => {
+test('shows a translate trigger for selected text, opens the bubble on click, and closes it outside', async () => {
   const page = await context!.newPage();
   await page.setViewportSize({ width: 360, height: 640 });
   await page.goto(contentUrl);
   await page.locator('#selection').selectText();
   await page.evaluate(() => document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })));
+
+  const triggerHost = page.locator('#translatly-trigger-host');
+  await expect(triggerHost).toBeAttached();
+
+  // Clicking the trigger opens the translation bubble.
+  await triggerHost.locator('button').click();
 
   const bubbleHost = page.locator('#translatly-bubble-host');
   await expect(bubbleHost).toBeAttached();

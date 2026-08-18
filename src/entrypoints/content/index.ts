@@ -9,7 +9,12 @@ let bubbleComponent: ReturnType<typeof mount> | null = null;
 let currentRequestId: string | null = null;
 let defaults = { source: 'en', target: 'es' };
 
-// Lazy load Bubble component to avoid SSR issues during pre-rendering
+let triggerHost: HTMLDivElement | null = null;
+let triggerShadow: ShadowRoot | null = null;
+let triggerComponent: ReturnType<typeof mount> | null = null;
+let pendingTrigger: { text: string; rect: DOMRect } | null = null;
+
+// Lazy load components to avoid SSR issues during pre-rendering
 let Bubble: typeof import('./Bubble.svelte').default | null = null;
 async function loadBubble() {
   if (!Bubble) {
@@ -19,13 +24,36 @@ async function loadBubble() {
   return Bubble;
 }
 
+let TranslateTrigger: typeof import('./TranslateTrigger.svelte').default | null = null;
+async function loadTrigger() {
+  if (!TranslateTrigger) {
+    const module = await import('./TranslateTrigger.svelte');
+    TranslateTrigger = module.default;
+  }
+  return TranslateTrigger;
+}
+
 // Load default languages on script initialization
 loadDefaultLanguages().then((d) => {
   defaults = d;
 });
 
+const MAX_SELECTION_LENGTH = 5000;
+
+function getSelectionInfo(): { text: string; rect: DOMRect } | undefined {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return undefined;
+
+  const text = selection.toString().trim();
+  if (!text || text.length > MAX_SELECTION_LENGTH) return undefined;
+
+  const range = selection.getRangeAt(0);
+  return { text, rect: range.getBoundingClientRect() };
+}
+
+// ---- Translation bubble ---------------------------------------------------
+
 async function showBubble(text: string, rect: DOMRect) {
-  // Remove existing bubble if any
   hideBubble();
 
   // Create host element
@@ -127,51 +155,128 @@ function hideBubble() {
   currentRequestId = null;
 }
 
+// ---- Translate trigger icon ------------------------------------------------
+
+const TRIGGER_SIZE = 30;
+const TRIGGER_MARGIN = 8;
+const TRIGGER_GAP = 8;
+
+async function showTrigger(text: string, rect: DOMRect) {
+  hideBubble();
+  hideTrigger();
+
+  triggerHost = document.createElement('div');
+  triggerHost.id = 'translatly-trigger-host';
+  triggerHost.style.position = 'fixed';
+  triggerHost.style.zIndex = '2147483647';
+  triggerHost.style.width = `${TRIGGER_SIZE}px`;
+  triggerHost.style.height = `${TRIGGER_SIZE}px`;
+  triggerHost.style.pointerEvents = 'none';
+
+  positionTrigger(rect);
+  document.body.appendChild(triggerHost);
+
+  triggerShadow = triggerHost.attachShadow({ mode: 'open' });
+
+  const TriggerComponent = await loadTrigger();
+  pendingTrigger = { text, rect };
+  triggerComponent = mount(TriggerComponent, {
+    target: triggerShadow,
+    props: {
+      onClick: () => {
+        if (!pendingTrigger) return;
+        const { text: pendingText, rect: pendingRect } = pendingTrigger;
+        hideTrigger();
+        void showBubble(pendingText, pendingRect);
+      },
+    },
+  });
+  // Enable pointer events after mount
+  triggerHost.style.pointerEvents = 'auto';
+}
+
+function positionTrigger(rect: DOMRect) {
+  if (!triggerHost) return;
+  let left = rect.right + TRIGGER_GAP;
+  let top = rect.top;
+  // Flip to the left side of the selection when there is no room on the right.
+  if (left + TRIGGER_SIZE > window.innerWidth - TRIGGER_MARGIN) {
+    left = rect.left - TRIGGER_SIZE - TRIGGER_GAP;
+  }
+  left = Math.max(TRIGGER_MARGIN, Math.min(left, window.innerWidth - TRIGGER_SIZE - TRIGGER_MARGIN));
+  top = Math.max(TRIGGER_MARGIN, Math.min(top, window.innerHeight - TRIGGER_SIZE - TRIGGER_MARGIN));
+  triggerHost.style.left = `${left}px`;
+  triggerHost.style.top = `${top}px`;
+}
+
+function hideTrigger() {
+  pendingTrigger = null;
+  if (triggerComponent) {
+    unmount(triggerComponent);
+    triggerComponent = null;
+  }
+  if (triggerHost) {
+    triggerHost.remove();
+    triggerHost = null;
+  }
+  triggerShadow = null;
+}
+
+// ---- Selection handling ----------------------------------------------------
+
 async function handleSelection() {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) {
-    return;
+  const info = getSelectionInfo();
+  if (info) await showTrigger(info.text, info.rect);
+}
+
+async function translateSelection() {
+  const info = getSelectionInfo();
+  if (info) {
+    hideTrigger();
+    await showBubble(info.text, info.rect);
   }
-
-  const text = selection.toString().trim();
-  if (!text || text.length > 5000) {
-    return;
-  }
-
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
-
-  await showBubble(text, rect);
 }
 
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
   main() {
-    // Listen for mouseup to detect selection
+    // Listen for mouseup to detect selection and show the translate trigger
     document.addEventListener('mouseup', (e) => {
-      // Ignore clicks inside the bubble
-      if (bubbleHost && bubbleHost.contains(e.target as Node)) {
-        return;
-      }
+      // Ignore interactions inside the extension's own surfaces
+      if (bubbleHost && bubbleHost.contains(e.target as Node)) return;
+      if (triggerHost && triggerHost.contains(e.target as Node)) return;
 
       // Small delay to let selection finalize
       setTimeout(handleSelection, 10);
     });
 
-    // Listen for clicks outside bubble to close it
+    // Listen for clicks outside the bubble or trigger to close them
     document.addEventListener('mousedown', (e) => {
-      if (bubbleHost && !bubbleHost.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (bubbleHost && bubbleHost.contains(target)) return;
+      if (triggerHost && triggerHost.contains(target)) return;
+      hideBubble();
+      hideTrigger();
+    });
+
+    // Close surfaces with Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
         hideBubble();
+        hideTrigger();
       }
     });
+
+    // The trigger floats near the selection; drop it when the page moves.
+    document.addEventListener('scroll', () => hideTrigger(), true);
 
     // Listen for messages from background (e.g., context menu)
     browser.runtime.onMessage.addListener((msg: unknown) => {
       if (typeof msg === 'object' && msg !== null && 'type' in msg) {
         const type = (msg as { type?: unknown }).type;
         if (type === 'translate-selection') {
-          handleSelection();
+          void translateSelection();
           return true;
         }
       }
