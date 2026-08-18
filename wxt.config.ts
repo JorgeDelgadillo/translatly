@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: ({ browser, manifestVersion }) => {
     const name = 'Translatly';
     const description =
-      'Translate any language to any language with local models. 100% private: translations never leave your device.';
+      'Translate curated languages with local models. 100% private: translations never leave your device.';
     // 'wasm-unsafe-eval' is required to instantiate the ONNX Runtime WASM
     // binaries inside extension pages.
     const csp = "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'";
@@ -29,6 +29,16 @@ export default defineConfig({
       host_permissions: ['https://huggingface.co/*', '<all_urls>'],
       content_security_policy:
         manifestVersion === 2 ? csp : { extension_pages: csp },
+      ...(browser === 'firefox'
+        ? {
+            browser_specific_settings: {
+              gecko: {
+                id: 'translatly@jdelgadillo.dev',
+                data_collection_permissions: { required: ['none'] },
+              },
+            },
+          }
+        : {}),
       // The full translator is also the browser's new-tab surface.
       chrome_url_overrides: {
         newtab: 'translator.html',
