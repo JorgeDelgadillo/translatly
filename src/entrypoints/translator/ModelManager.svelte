@@ -230,10 +230,10 @@
   .models-panel {
     margin-bottom: 2rem;
     padding: 1.5rem 1.65rem 1.65rem;
-    border: 1px solid rgba(17, 35, 55, 0.15);
+    border: 1px solid rgba(21, 26, 33, 0.15);
     border-radius: 0.45rem;
-    background: rgba(255, 253, 247, 0.78);
-    box-shadow: 0 1.4rem 3.8rem rgba(41, 44, 37, 0.06);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 1.4rem 3.8rem rgba(21, 26, 33, 0.06);
     animation: panel-in 220ms ease both;
   }
 
@@ -256,7 +256,7 @@
 
   .eyebrow {
     margin: 0 0 0.85rem;
-    color: #ed7259;
+    color: #315cff;
     font-family: 'SFMono-Regular', Consolas, monospace;
     font-size: 0.66rem;
     letter-spacing: 0.13em;
@@ -271,8 +271,8 @@
 
   h2,
   h3 {
-    color: #112337;
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    color: #151a21;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-weight: 400;
     letter-spacing: -0.04em;
   }
@@ -291,7 +291,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    color: #6e7b7d;
+    color: #687381;
     font-family: 'SFMono-Regular', Consolas, monospace;
     font-size: 0.63rem;
     line-height: 1.6;
@@ -300,8 +300,8 @@
   }
 
   .storage-summary strong {
-    color: #112337;
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    color: #151a21;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 1.65rem;
     font-weight: 400;
     letter-spacing: -0.04em;
@@ -311,13 +311,13 @@
   .models-intro {
     max-width: 620px;
     margin: 1rem 0 1.35rem;
-    color: #647276;
+    color: #687381;
     font-size: 0.9rem;
     line-height: 1.6;
   }
 
   .model-list {
-    border-top: 1px solid rgba(17, 35, 55, 0.12);
+    border-top: 1px solid rgba(21, 26, 33, 0.12);
   }
 
   .model-row {
@@ -325,7 +325,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 2rem;
     padding: 1.15rem 0;
-    border-bottom: 1px solid rgba(17, 35, 55, 0.12);
+    border-bottom: 1px solid rgba(21, 26, 33, 0.12);
   }
 
   .model-title-line {
@@ -336,8 +336,8 @@
   .model-kind {
     padding: 0.24rem 0.4rem;
     border-radius: 999px;
-    background: #e9e4d8;
-    color: #6f7877;
+    background: #eef1f4;
+    color: #687381;
     font-family: 'SFMono-Regular', Consolas, monospace;
     font-size: 0.57rem;
     letter-spacing: 0.07em;
@@ -345,19 +345,19 @@
   }
 
   .model-kind.universal {
-    background: #f7d4c8;
-    color: #9c4e3d;
+    background: #e8edff;
+    color: #315cff;
   }
 
   .model-copy > p {
     margin: 0.45rem 0 0.35rem;
-    color: #718083;
+    color: #687381;
     font-size: 0.79rem;
   }
 
   .model-languages,
   .model-status {
-    color: #788685;
+    color: #687381;
     font-family: 'SFMono-Regular', Consolas, monospace;
     font-size: 0.62rem;
     line-height: 1.5;
@@ -377,24 +377,24 @@
   }
 
   .model-status.error {
-    color: #b44f43;
+    color: #b4233c;
   }
 
   .model-button {
     padding: 0.55rem 0.8rem;
-    border: 1px solid #112337;
+    border: 1px solid #315cff;
     border-radius: 999px;
-    background: #112337;
-    color: #f2eee4;
+    background: #315cff;
+    color: #ffffff;
     font: inherit;
     font-size: 0.72rem;
     cursor: pointer;
   }
 
   .model-button.remove {
-    border-color: rgba(17, 35, 55, 0.2);
+    border-color: rgba(21, 26, 33, 0.2);
     background: transparent;
-    color: #112337;
+    color: #151a21;
   }
 
   .model-button:disabled {
@@ -408,14 +408,14 @@
     margin-top: 0.75rem;
     overflow: hidden;
     border-radius: 999px;
-    background: #e5e0d5;
+    background: #eef1f4;
   }
 
   .progress-track span {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: #ed7259;
+    background: #315cff;
     transition: width 180ms ease;
   }
 
@@ -438,20 +438,20 @@
   }
 
   :global(html[data-theme='dark']) .models-panel {
-    border-color: rgba(244, 240, 232, 0.2);
-    background: #182733;
-    color: #f4f0e8;
+    border-color: rgba(243, 245, 247, 0.2);
+    background: #1a2029;
+    color: #f3f5f7;
   }
 
   :global(html[data-theme='dark']) .models-panel h2,
   :global(html[data-theme='dark']) .models-panel h3,
   :global(html[data-theme='dark']) .storage-summary strong {
-    color: #f4f0e8;
+    color: #f3f5f7;
   }
 
   :global(html[data-theme='dark']) .models-panel .model-list,
   :global(html[data-theme='dark']) .models-panel .model-row {
-    border-color: rgba(244, 240, 232, 0.18);
+    border-color: rgba(243, 245, 247, 0.18);
   }
 
   :global(html[data-theme='dark']) .models-panel .models-intro,
@@ -459,40 +459,40 @@
   :global(html[data-theme='dark']) .models-panel .model-languages,
   :global(html[data-theme='dark']) .models-panel .model-status,
   :global(html[data-theme='dark']) .models-panel .storage-summary {
-    color: #b9c6c2;
+    color: #aeb8c4;
   }
 
   :global(html[data-theme='dark']) .models-panel .model-kind {
-    background: #26343d;
-    color: #d8e2dc;
+    background: #242c36;
+    color: #f3f5f7;
   }
 
   :global(html[data-theme='dark']) .models-panel .model-kind.universal {
-    background: #4a2d2d;
-    color: #ffb19e;
+    background: #202b4e;
+    color: #7d96ff;
   }
 
   :global(html[data-theme='dark']) .models-panel .model-button.remove {
-    border-color: rgba(244, 240, 232, 0.24);
-    color: #f4f0e8;
+    border-color: rgba(243, 245, 247, 0.24);
+    color: #f3f5f7;
   }
 
   @media (prefers-color-scheme: dark) {
     :global(html[data-theme='system']) .models-panel {
-      border-color: rgba(244, 240, 232, 0.2);
-      background: #182733;
-      color: #f4f0e8;
+      border-color: rgba(243, 245, 247, 0.2);
+      background: #1a2029;
+      color: #f3f5f7;
     }
 
     :global(html[data-theme='system']) .models-panel h2,
     :global(html[data-theme='system']) .models-panel h3,
     :global(html[data-theme='system']) .storage-summary strong {
-      color: #f4f0e8;
+      color: #f3f5f7;
     }
 
     :global(html[data-theme='system']) .models-panel .model-list,
     :global(html[data-theme='system']) .models-panel .model-row {
-      border-color: rgba(244, 240, 232, 0.18);
+      border-color: rgba(243, 245, 247, 0.18);
     }
 
     :global(html[data-theme='system']) .models-panel .models-intro,
@@ -500,22 +500,22 @@
     :global(html[data-theme='system']) .models-panel .model-languages,
     :global(html[data-theme='system']) .models-panel .model-status,
     :global(html[data-theme='system']) .models-panel .storage-summary {
-      color: #b9c6c2;
+      color: #aeb8c4;
     }
 
     :global(html[data-theme='system']) .models-panel .model-kind {
-      background: #26343d;
-      color: #d8e2dc;
+      background: #242c36;
+      color: #f3f5f7;
     }
 
     :global(html[data-theme='system']) .models-panel .model-kind.universal {
-      background: #4a2d2d;
-      color: #ffb19e;
+      background: #202b4e;
+      color: #7d96ff;
     }
 
     :global(html[data-theme='system']) .models-panel .model-button.remove {
-      border-color: rgba(244, 240, 232, 0.24);
-      color: #f4f0e8;
+      border-color: rgba(243, 245, 247, 0.24);
+      color: #f3f5f7;
     }
   }
 

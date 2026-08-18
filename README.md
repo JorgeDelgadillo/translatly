@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/JorgeDelgadillo/translatly/actions/workflows/tests.yml/badge.svg)](https://github.com/JorgeDelgadillo/translatly/actions/workflows/tests.yml)
 [![Latest release](https://img.shields.io/github/v/release/JorgeDelgadillo/translatly)](https://github.com/JorgeDelgadillo/translatly/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-ed7259.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-315cff.svg)](./LICENSE)
 
 Privacy-first translation for the browser. Translatly runs quantized neural
 translation models locally in Chromium and Firefox, so translation text stays

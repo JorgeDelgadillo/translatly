@@ -243,14 +243,14 @@
 
 <style>
   .popup-shell {
-    --canvas: #f2eee4;
-    --paper: #fffdf8;
-    --surface: #ebe5d7;
-    --ink: #112337;
-    --muted: #6d7b7c;
-    --line: #d1d8d1;
-    --accent: #ed7259;
-    --accent-soft: #f7ddd5;
+    --canvas: #f6f8fa;
+    --paper: #ffffff;
+    --surface: #eef1f4;
+    --ink: #151a21;
+    --muted: #687381;
+    --line: #d7dee6;
+    --accent: #315cff;
+    --accent-soft: #e8edff;
     width: 380px;
     min-height: 470px;
     box-sizing: border-box;
@@ -289,7 +289,7 @@
     border-radius: 9px;
     background: var(--ink);
     color: var(--paper);
-    font-family: Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 17px;
     font-weight: 700;
   }
@@ -472,7 +472,7 @@
     flex: 1;
     border-color: var(--accent);
     background: var(--accent);
-    color: #fffdf8;
+    color: #ffffff;
     font-weight: 700;
   }
 
@@ -501,7 +501,7 @@
 
   .result-card {
     padding: 12px;
-    background: #edf5ef;
+    background: #eef2ff;
   }
 
   .result-heading {
@@ -528,35 +528,35 @@
   }
 
   .status.error {
-    color: #b44f43;
+    color: #b4233c;
   }
 
   :global(html[data-theme='dark']) .popup-shell {
-    --canvas: #101a24;
-    --paper: #182733;
-    --surface: #26343d;
-    --ink: #f4f0e8;
-    --muted: #b2c0bd;
-    --line: #50636b;
-    --accent: #ff947c;
-    --accent-soft: #4a2d2d;
+    --canvas: #11161d;
+    --paper: #1a2029;
+    --surface: #242c36;
+    --ink: #f3f5f7;
+    --muted: #aeb8c4;
+    --line: #46515e;
+    --accent: #7d96ff;
+    --accent-soft: #202b4e;
   }
 
   @media (prefers-color-scheme: light) {
     :global(html[data-theme='system']) .popup-shell {
-      --canvas: #f2eee4;
-      --paper: #fffdf8;
-      --surface: #ebe5d7;
-      --ink: #112337;
-      --muted: #6d7b7c;
-      --line: #d1d8d1;
-      --accent: #ed7259;
+      --canvas: #f6f8fa;
+      --paper: #ffffff;
+      --surface: #eef1f4;
+      --ink: #151a21;
+      --muted: #687381;
+      --line: #d7dee6;
+      --accent: #315cff;
       color-scheme: light;
     }
   }
 
   :global(html[data-theme='dark']) .result-card {
-    background: #1d3836;
+    background: #202b4e;
   }
 
   :global(html[data-theme='light']) .popup-shell {
@@ -569,19 +569,19 @@
 
   @media (prefers-color-scheme: dark) {
     :global(html[data-theme='system']) .popup-shell {
-      --canvas: #101a24;
-      --paper: #182733;
-      --surface: #26343d;
-      --ink: #f4f0e8;
-      --muted: #b2c0bd;
-      --line: #50636b;
-      --accent: #ff947c;
-      --accent-soft: #4a2d2d;
+      --canvas: #11161d;
+      --paper: #1a2029;
+      --surface: #242c36;
+      --ink: #f3f5f7;
+      --muted: #aeb8c4;
+      --line: #46515e;
+      --accent: #7d96ff;
+      --accent-soft: #202b4e;
       color-scheme: dark;
     }
 
     :global(html[data-theme='system']) .result-card {
-      background: #1d3836;
+      background: #202b4e;
     }
   }
 

@@ -653,49 +653,49 @@
 
 <style>
   :global(:root) {
-    --canvas: #f2eee4;
-    --ink: #112337;
-    --accent: #ed7259;
-    --paper: #fffdf7;
-    --sage: #d9e6dd;
-    --sand: #ebe5d7;
-    --ambient-one: #e6c6b6;
-    --ambient-two: #cad9ce;
-    --accent-soft: #f5ddd6;
-    --deep: #112337;
-    --deep-text: #fffdf7;
-    --deep-muted: #b0c2ba;
+    --canvas: #f6f8fa;
+    --ink: #151a21;
+    --accent: #315cff;
+    --paper: #ffffff;
+    --sage: #eef2ff;
+    --sand: #eef1f4;
+    --ambient-one: transparent;
+    --ambient-two: transparent;
+    --accent-soft: #e8edff;
+    --deep: #151a21;
+    --deep-text: #f3f5f7;
+    --deep-muted: #aeb8c4;
   }
 
   :global(:root[data-theme='dark']) {
-    --canvas: #101a24;
-    --ink: #f4f0e8;
-    --accent: #ff947c;
-    --paper: #182733;
-    --sage: #244039;
-    --sand: #26343d;
-    --ambient-one: #3e2e35;
-    --ambient-two: #1d3a3b;
-    --accent-soft: #4a2d2d;
-    --deep: #08131d;
-    --deep-text: #f4f0e8;
-    --deep-muted: #b0c2ba;
+    --canvas: #11161d;
+    --ink: #f3f5f7;
+    --accent: #7d96ff;
+    --paper: #1a2029;
+    --sage: #202b4e;
+    --sand: #242c36;
+    --ambient-one: transparent;
+    --ambient-two: transparent;
+    --accent-soft: #202b4e;
+    --deep: #0d1117;
+    --deep-text: #f3f5f7;
+    --deep-muted: #aeb8c4;
   }
 
   @media (prefers-color-scheme: dark) {
     :global(:root[data-theme='system']) {
-      --canvas: #101a24;
-      --ink: #f4f0e8;
-      --accent: #ff947c;
-      --paper: #182733;
-      --sage: #244039;
-      --sand: #26343d;
-      --ambient-one: #3e2e35;
-      --ambient-two: #1d3a3b;
-      --accent-soft: #4a2d2d;
-      --deep: #08131d;
-      --deep-text: #f4f0e8;
-      --deep-muted: #b0c2ba;
+      --canvas: #11161d;
+      --ink: #f3f5f7;
+      --accent: #7d96ff;
+      --paper: #1a2029;
+      --sage: #202b4e;
+      --sand: #242c36;
+      --ambient-one: transparent;
+      --ambient-two: transparent;
+      --accent-soft: #202b4e;
+      --deep: #0d1117;
+      --deep-text: #f3f5f7;
+      --deep-muted: #aeb8c4;
     }
   }
 
@@ -785,7 +785,7 @@
     border-radius: 50%;
     background: var(--ink);
     color: var(--canvas);
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 1.25rem;
     font-weight: 700;
   }
@@ -890,7 +890,7 @@
 
   h1,
   h2 {
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-weight: 400;
     letter-spacing: -0.055em;
   }
@@ -1061,7 +1061,7 @@
     border-bottom: 2px solid var(--ink);
     border-radius: 0;
     background: transparent;
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 1.15rem;
   }
 
@@ -1141,7 +1141,7 @@
     outline: none;
     background: transparent;
     color: var(--ink);
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: clamp(1.25rem, 2vw, 1.65rem);
     line-height: 1.35;
   }
@@ -1161,7 +1161,7 @@
   .output-placeholder {
     margin: 0;
     color: var(--ink);
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: clamp(1.25rem, 2vw, 1.65rem);
     line-height: 1.35;
     white-space: pre-wrap;
@@ -1331,7 +1331,7 @@
   .empty-history p {
     margin: 0.4rem 0;
     color: #43575a;
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 1.1rem;
   }
 
@@ -1390,7 +1390,7 @@
   .history-text {
     overflow: hidden;
     color: #30484b;
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 1.05rem;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1560,7 +1560,7 @@
   .onboarding-grid h3 {
     margin: 0.7rem 0 0.45rem;
     color: var(--ink);
-    font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 1.25rem;
     font-weight: 400;
     letter-spacing: -0.035em;

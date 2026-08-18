@@ -1,45 +1,45 @@
 .bubble {
-  --bubble-bg: #fffdf8;
-  --bubble-surface: #f6f1e8;
-  --bubble-result: #f0f6f1;
-  --bubble-ink: #112337;
-  --bubble-muted: #68777a;
-  --bubble-line: #d9ddd8;
-  --bubble-accent: #ed7259;
-  --bubble-accent-soft: #f9e1da;
+  --bubble-bg: #ffffff;
+  --bubble-surface: #eef1f4;
+  --bubble-result: #eef2ff;
+  --bubble-ink: #151a21;
+  --bubble-muted: #687381;
+  --bubble-line: #d7dee6;
+  --bubble-accent: #315cff;
+  --bubble-accent-soft: #e8edff;
   width: 100%;
   overflow: hidden;
   border: 1px solid var(--bubble-line);
   border-radius: 14px;
   background: var(--bubble-bg);
-  box-shadow: 0 18px 48px rgba(17, 35, 55, 0.2), 0 3px 10px rgba(17, 35, 55, 0.12);
+  box-shadow: 0 14px 36px rgba(21, 26, 33, 0.18), 0 2px 8px rgba(21, 26, 33, 0.1);
   color: var(--bubble-ink);
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
   line-height: 1.45;
 }
 
 .bubble.dark {
-  --bubble-bg: #182733;
-  --bubble-surface: #20333e;
-  --bubble-result: #1d3836;
-  --bubble-ink: #f4f0e8;
-  --bubble-muted: #b2c0bd;
-  --bubble-line: #50636b;
-  --bubble-accent: #ff947c;
-  --bubble-accent-soft: #4a2d2d;
+  --bubble-bg: #1a2029;
+  --bubble-surface: #242c36;
+  --bubble-result: #202b4e;
+  --bubble-ink: #f3f5f7;
+  --bubble-muted: #aeb8c4;
+  --bubble-line: #46515e;
+  --bubble-accent: #7d96ff;
+  --bubble-accent-soft: #202b4e;
 }
 
 @media (prefers-color-scheme: dark) {
   .bubble:not(.light) {
-    --bubble-bg: #182733;
-    --bubble-surface: #20333e;
-    --bubble-result: #1d3836;
-    --bubble-ink: #f4f0e8;
-    --bubble-muted: #b2c0bd;
-    --bubble-line: #50636b;
-    --bubble-accent: #ff947c;
-    --bubble-accent-soft: #4a2d2d;
+    --bubble-bg: #1a2029;
+    --bubble-surface: #242c36;
+    --bubble-result: #202b4e;
+    --bubble-ink: #f3f5f7;
+    --bubble-muted: #aeb8c4;
+    --bubble-line: #46515e;
+    --bubble-accent: #7d96ff;
+    --bubble-accent-soft: #202b4e;
   }
 }
 
@@ -81,7 +81,7 @@
   border-radius: 7px;
   background: var(--bubble-ink);
   color: var(--bubble-bg);
-  font-family: Georgia, serif;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
   font-weight: 700;
 }

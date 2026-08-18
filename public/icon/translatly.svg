@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="logo-title logo-description">
   <title id="logo-title">Translatly</title>
   <desc id="logo-description">Two overlapping speech bubbles representing local translation.</desc>
-  <rect width="128" height="128" rx="30" fill="#112337"/>
-  <path fill="#f2eee4" d="M25 44c0-11.046 8.954-20 20-20h39c11.046 0 20 8.954 20 20v15c0 11.046-8.954 20-20 20H59L43 90l4-16h-2c-11.046 0-20-8.954-20-20V44Z"/>
-  <rect x="42" y="40" width="39" height="7" rx="3.5" fill="#112337"/>
-  <rect x="42" y="53" width="26" height="7" rx="3.5" fill="#112337"/>
-  <path fill="#ed7259" d="M45 68c0-10.493 8.507-19 19-19h22c10.493 0 19 8.507 19 19v12c0 10.493-8.507 19-19 19H72l-16 11 4-11h4c-10.493 0-19-8.507-19-19V68Z"/>
-  <rect x="61" y="68" width="30" height="7" rx="3.5" fill="#f2eee4"/>
-  <rect x="61" y="81" width="21" height="7" rx="3.5" fill="#f2eee4"/>
+  <rect width="128" height="128" rx="26" fill="#151a21"/>
+  <path fill="#f6f8fa" d="M25 44c0-11.046 8.954-20 20-20h39c11.046 0 20 8.954 20 20v15c0 11.046-8.954 20-20 20H59L43 90l4-16h-2c-11.046 0-20-8.954-20-20V44Z"/>
+  <rect x="42" y="40" width="39" height="7" rx="3.5" fill="#151a21"/>
+  <rect x="42" y="53" width="26" height="7" rx="3.5" fill="#151a21"/>
+  <path fill="#315cff" d="M45 68c0-10.493 8.507-19 19-19h22c10.493 0 19 8.507 19 19v12c0 10.493-8.507 19-19 19H72l-16 11 4-11h4c-10.493 0-19-8.507-19-19V68Z"/>
+  <rect x="61" y="68" width="30" height="7" rx="3.5" fill="#ffffff"/>
+  <rect x="61" y="81" width="21" height="7" rx="3.5" fill="#ffffff"/>
 </svg>

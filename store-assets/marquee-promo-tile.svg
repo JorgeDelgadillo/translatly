@@ -1,36 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560">
-  <defs>
-    <linearGradient id="marquee-background" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#101a24"/>
-      <stop offset="1" stop-color="#112337"/>
-    </linearGradient>
-    <radialGradient id="marquee-glow" cx="80%" cy="45%" r="60%">
-      <stop offset="0" stop-color="#ed7259" stop-opacity="0.24"/>
-      <stop offset="1" stop-color="#ed7259" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="marquee-shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#000000" flood-opacity="0.3"/>
-    </filter>
-  </defs>
-  <rect width="1400" height="560" fill="url(#marquee-background)"/>
-  <rect width="1400" height="560" fill="url(#marquee-glow)"/>
-  <path d="M0 470C250 360 410 520 660 430S1090 240 1400 350" fill="none" stroke="#f2eee4" stroke-opacity="0.08" stroke-width="2"/>
-  <path d="M0 500C260 390 420 550 690 460S1110 270 1400 375" fill="none" stroke="#ed7259" stroke-opacity="0.18" stroke-width="2"/>
-  <text x="92" y="108" fill="#ed7259" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="6">TRANSLATLY</text>
-  <text x="92" y="222" fill="#f2eee4" font-family="Georgia, serif" font-size="70">Translation that</text>
-  <text x="92" y="304" fill="#f2eee4" font-family="Georgia, serif" font-size="70">stays yours.</text>
-  <text x="96" y="370" fill="#b9c1c3" font-family="Arial, Helvetica, sans-serif" font-size="22">Local-first translation for the web.</text>
-  <rect x="96" y="422" width="150" height="4" rx="2" fill="#ed7259"/>
-  <text x="96" y="466" fill="#f2eee4" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2">TRANSLATIONS STAY ON YOUR DEVICE</text>
-  <g filter="url(#marquee-shadow)">
-    <rect x="920" y="76" width="330" height="366" rx="34" fill="#f2eee4"/>
-    <path fill="#112337" d="M955 154c0-18.225 14.775-33 33-33h119c18.225 0 33 14.775 33 33v36c0 18.225-14.775 33-33 33h-51l-25 22 7-22h-50c-18.225 0-33-14.775-33-33v-36Z"/>
-    <rect x="982" y="157" width="78" height="10" rx="5" fill="#f2eee4"/>
-    <rect x="982" y="177" width="52" height="10" rx="5" fill="#f2eee4"/>
-    <path fill="#ed7259" d="M1017 278c0-17.673 14.327-32 32-32h110c17.673 0 32 14.327 32 32v39c0 17.673-14.327 32-32 32h-48l-27 23 7-23h-42c-17.673 0-32-14.327-32-32v-39Z"/>
-    <rect x="1050" y="282" width="70" height="10" rx="5" fill="#f2eee4"/>
-    <rect x="1050" y="302" width="47" height="10" rx="5" fill="#f2eee4"/>
-    <circle cx="1184" cy="397" r="9" fill="#4b9f83"/>
-  </g>
-  <circle cx="1320" cy="80" r="9" fill="#ed7259"/>
+  <pattern id="marquee-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M40 0H0V40" fill="none" stroke="#293440" stroke-width="1"/>
+  </pattern>
+  <rect width="1400" height="560" fill="#151a21"/>
+  <rect width="1400" height="560" fill="url(#marquee-grid)" opacity="0.7"/>
+  <path d="M0 430H1400" stroke="#315cff" stroke-opacity="0.7" stroke-width="2"/>
+  <text x="92" y="108" fill="#7d96ff" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="5">TRANSLATLY / LOCAL DESK</text>
+  <text x="92" y="214" fill="#f3f5f7" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700">Translation without</text>
+  <text x="92" y="282" fill="#f3f5f7" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700">the trip to a server.</text>
+  <text x="96" y="350" fill="#aeb8c4" font-family="Arial, Helvetica, sans-serif" font-size="21">Local-first translation for the web.</text>
+  <rect x="96" y="399" width="150" height="4" fill="#315cff"/>
+  <text x="96" y="470" fill="#f3f5f7" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="2">WORDS STAY ON YOUR DEVICE</text>
+  <rect x="934" y="74" width="330" height="368" rx="10" fill="#f6f8fa" stroke="#d7dee6" stroke-width="2"/>
+  <rect x="934" y="74" width="330" height="48" rx="10" fill="#ffffff"/>
+  <circle cx="962" cy="98" r="13" fill="#315cff"/>
+  <text x="957" y="103" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700">T</text>
+  <text x="986" y="103" fill="#151a21" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">Translatly</text>
+  <text x="1160" y="102" fill="#687381" font-family="monospace" font-size="10">LOCAL</text>
+  <rect x="960" y="151" width="278" height="44" rx="5" fill="#eef1f4" stroke="#d7dee6"/>
+  <text x="976" y="178" fill="#151a21" font-family="Arial, Helvetica, sans-serif" font-size="13">English  →  Spanish</text>
+  <rect x="960" y="213" width="278" height="86" rx="5" fill="#ffffff" stroke="#d7dee6"/>
+  <text x="976" y="237" fill="#315cff" font-family="monospace" font-size="10">TEXT / ORIGINAL</text>
+  <text x="976" y="264" fill="#151a21" font-family="Arial, Helvetica, sans-serif" font-size="14">Translate privately.</text>
+  <rect x="960" y="317" width="278" height="76" rx="5" fill="#e8edff" stroke="#b9c6ff"/>
+  <text x="976" y="341" fill="#315cff" font-family="monospace" font-size="10">RESULT / LOCAL MODEL</text>
+  <text x="976" y="368" fill="#151a21" font-family="Arial, Helvetica, sans-serif" font-size="14">No server in between.</text>
+  <circle cx="1213" cy="414" r="5" fill="#315cff"/>
 </svg>
