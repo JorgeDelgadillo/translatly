@@ -4,6 +4,7 @@ import {
   getTranslationRoute,
   type TranslationRoute,
 } from './registry';
+import { splitIntoSegments } from './segment';
 
 export interface ModelDownloadProgress {
   status: string;
@@ -118,8 +119,20 @@ export async function translate(
   if (!route) throw new Error(`Unsupported language pair: ${srcLang} -> ${tgtLang}`);
 
   const translator = await getTranslator(route.modelId, options);
-  const [result] = await translator(text, translationCallOptions(route, options.signal) as never);
-  return result.translation_text;
+
+  // The models normalize whitespace, so multi-line text is translated line by
+  // line and rejoined with its original separators to keep the structure.
+  const segments = splitIntoSegments(text);
+  const translations: string[] = [];
+  for (const segment of segments) {
+    if (options.signal?.aborted) throw createAbortError();
+    const [result] = await translator(
+      segment.text,
+      translationCallOptions(route, options.signal) as never,
+    );
+    translations.push(result.translation_text);
+  }
+  return translations.map((translation, index) => translation + segments[index]!.separator).join('');
 }
 
 /** Downloads and warms a registered model in the engine host. */
