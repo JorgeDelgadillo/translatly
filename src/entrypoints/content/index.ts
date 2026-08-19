@@ -240,45 +240,64 @@ async function translateSelection() {
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
+  // Some pages (LinkedIn, Google Docs, …) render content in iframes or stop
+  // event propagation on their own handlers; capture-phase listeners and
+  // per-frame injection keep the inline surface working everywhere.
+  allFrames: true,
   main() {
-    // Listen for mouseup to detect selection and show the translate trigger
-    document.addEventListener('mouseup', (e) => {
-      // Ignore interactions inside the extension's own surfaces
-      if (bubbleHost && bubbleHost.contains(e.target as Node)) return;
-      if (triggerHost && triggerHost.contains(e.target as Node)) return;
+    // Listen for mouseup to detect selection and show the translate trigger.
+    // Capture phase so page scripts cannot swallow the event.
+    document.addEventListener(
+      'mouseup',
+      (e) => {
+        // Ignore interactions inside the extension's own surfaces
+        if (bubbleHost && bubbleHost.contains(e.target as Node)) return;
+        if (triggerHost && triggerHost.contains(e.target as Node)) return;
 
-      // Small delay to let selection finalize
-      setTimeout(handleSelection, 10);
-    });
+        // Small delay to let selection finalize
+        setTimeout(handleSelection, 10);
+      },
+      true,
+    );
 
     // Listen for clicks outside the bubble or trigger to close them
-    document.addEventListener('mousedown', (e) => {
-      const target = e.target as Node;
-      if (bubbleHost && bubbleHost.contains(target)) return;
-      if (triggerHost && triggerHost.contains(target)) return;
-      hideBubble();
-      hideTrigger();
-    });
-
-    // Close surfaces with Escape
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+    document.addEventListener(
+      'mousedown',
+      (e) => {
+        const target = e.target as Node;
+        if (bubbleHost && bubbleHost.contains(target)) return;
+        if (triggerHost && triggerHost.contains(target)) return;
         hideBubble();
         hideTrigger();
-      }
-    });
+      },
+      true,
+    );
+
+    // Close surfaces with Escape
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape') {
+          hideBubble();
+          hideTrigger();
+        }
+      },
+      true,
+    );
 
     // The trigger floats near the selection; drop it when the page moves.
     document.addEventListener('scroll', () => hideTrigger(), true);
 
-    // Listen for messages from background (e.g., context menu)
+    // Listen for messages from background (e.g., context menu). The listener
+    // returns false so the sender's sendMessage promise settles immediately;
+    // otherwise the channel stays open waiting for a response that never comes.
     browser.runtime.onMessage.addListener((msg: unknown) => {
-      if (typeof msg === 'object' && msg !== null && 'type' in msg) {
-        const type = (msg as { type?: unknown }).type;
-        if (type === 'translate-selection') {
-          void translateSelection();
-          return true;
-        }
+      if (
+        typeof msg === 'object' &&
+        msg !== null &&
+        (msg as { type?: unknown }).type === 'translate-selection'
+      ) {
+        void translateSelection();
       }
       return false;
     });
