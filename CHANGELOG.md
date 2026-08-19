@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.3] - 2026-08-18
+
+### Added
+
+- Translations preserve line breaks, blank lines, and paragraph structure; long lines are split at word boundaries.
+
+### Fixed
+
+- Inline translation now works on pages that block or intercept mouse events (for example LinkedIn), including content inside iframes.
+- Right-click "Translate with Translatly" now always works: if the page's content script is not reachable, the selected text is read directly and opened in the full translator.
+
 ## [1.1.2] - 2026-08-18
 
 ### Changed
