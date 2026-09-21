@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.2.0] - 2026-09-21
+
+### Security
+
+- Model files download only from pinned Hugging Face commits and must match their recorded SHA-256.
+- Network access is limited to `huggingface.co` and `*.hf.co`.
+- Inline translation starts only from a real user gesture.
+- Model management and cancelling every translation stay inside extension pages.
+- Translation text is rejected above 5,000 characters.
+
+### Fixed
+
+- A model download is no longer cleared by a duplicate status response, so cancel works.
+- Pipeline file checks use the pinned commit instead of `main`.
+- The content script no longer crashes on pages that disallow Svelte's trusted-types policy.
+- Restarting the service worker no longer reports a duplicate context-menu id.
+
+### Changed
+
+- Svelte 5.56.9, svelte-check 4.7.6, WXT 0.21.4, Vitest 4.1.11, and Playwright 1.62.1.
+- GitHub Actions stay pinned to reviewed commits of their current major releases.
+
 ## [1.1.3] - 2026-08-18
 
 ### Added
