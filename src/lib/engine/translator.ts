@@ -140,6 +140,7 @@ export async function translate(
       segment.text,
       translationCallOptions(route, options.signal) as never,
     );
+    if (!result) throw new Error('The translation model returned no text');
     translations.push(result.translation_text);
   }
   return translations.map((translation, index) => translation + segments[index]!.separator).join('');
