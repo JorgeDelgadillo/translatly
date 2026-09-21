@@ -4,6 +4,8 @@ import {
   getTranslationRoute,
   type TranslationRoute,
 } from './registry';
+import { fetchPinnedModelFile } from './model-fetch';
+import { getModelPin } from './model-pins';
 import { splitIntoSegments } from './segment';
 
 export interface ModelDownloadProgress {
@@ -36,16 +38,24 @@ function createAbortError(): Error {
   return error;
 }
 
+function modelLoadOptions(modelId: string): { dtype: 'int8'; revision: string } {
+  const pin = getModelPin(modelId);
+  if (!pin) throw new Error(`Unpinned translation model: ${modelId}`);
+  return { dtype: 'int8', revision: pin.revision };
+}
+
 function configureEnvironment(wasmBaseUrl: string, signal?: AbortSignal): void {
-  // Models come from the Hugging Face hub; nothing else may be loaded.
+  // Models come from the pinned Hugging Face commits; nothing else may be loaded.
   env.allowLocalModels = false;
   env.allowRemoteModels = true;
+  const load = (input: RequestInfo | URL, init?: RequestInit) =>
+    fetchPinnedModelFile(input, init, defaultFetch as typeof fetch);
   env.fetch = signal
     ? (input, init = {}) => {
         if (signal.aborted) return Promise.reject(createAbortError());
-        return defaultFetch(input, { ...init, signal: init.signal ?? signal });
+        return load(input, { ...init, signal: init.signal ?? signal });
       }
-    : defaultFetch;
+    : load;
   // The wasm backend options object is always present in browser builds; the
   // library types mark it optional and read-only, hence the assertion.
   const wasm = env.backends.onnx.wasm!;
@@ -82,7 +92,7 @@ async function getTranslator(
   }
 
   const translator = await pipeline('translation', modelId, {
-    dtype: 'int8',
+    ...modelLoadOptions(modelId),
     // The OPUS-MT merged decoder trips an ORT 1.26-dev graph optimizer bug:
     // the `DQ -> MatMul` -> `MatMulNBits` fusion (extended level) aborts with
     // "Missing required scale" for the shared embedding. Pinning the level to
@@ -153,7 +163,7 @@ export async function preloadModel(modelId: string, options: TranslateOptions): 
 export async function isModelCached(modelId: string, options: TranslateOptions): Promise<boolean> {
   if (!getModelDescriptor(modelId)) throw new Error(`Unknown translation model: ${modelId}`);
   configureEnvironment(options.wasmBaseUrl);
-  return ModelRegistry.is_pipeline_cached('translation', modelId, { dtype: 'int8' });
+  return ModelRegistry.is_pipeline_cached('translation', modelId, modelLoadOptions(modelId));
 }
 
 /** Disposes the in-memory pipeline and clears its on-device cache entries. */
@@ -165,5 +175,5 @@ export async function removeModel(modelId: string, options: TranslateOptions): P
     cache.delete(modelId);
     disposeTranslator(cached);
   }
-  await ModelRegistry.clear_pipeline_cache('translation', modelId, { dtype: 'int8' });
+  await ModelRegistry.clear_pipeline_cache('translation', modelId, modelLoadOptions(modelId));
 }
