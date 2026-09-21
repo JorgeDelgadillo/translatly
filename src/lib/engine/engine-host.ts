@@ -9,10 +9,8 @@ import {
   type ModelDeleteRequestMessage,
   type ModelStatusRequestMessage,
 } from '@/lib/messaging/protocol';
-import {
-  getModelDescriptor,
-  type ModelDescriptor,
-} from './registry';
+import { isExtensionPageSender, isPrivilegedEngineMessage } from '@/lib/messaging/sender';
+import { getModelDescriptor, type ModelDescriptor } from './registry';
 import {
   isModelCached,
   preloadModel,
@@ -111,7 +109,13 @@ async function handleModelRequest(
 export function startEngineHost(options: EngineHostOptions = {}): void {
   const queue = new TranslationQueue(options.onBroadcast);
 
-  browser.runtime.onMessage.addListener((msg: unknown) => {
+  browser.runtime.onMessage.addListener((msg: unknown, sender) => {
+    if (
+      isPrivilegedEngineMessage(msg) &&
+      !isExtensionPageSender(sender.url, browser.runtime.getURL('/'))
+    ) {
+      return undefined;
+    }
     if (isModelManagerMessage(msg)) {
       if (msg.type === 'model:cancel') {
         queue.cancelModelOperation(msg.requestId);

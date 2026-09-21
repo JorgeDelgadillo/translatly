@@ -2,12 +2,12 @@ import { browser } from 'wxt/browser';
 import {
   isEngineBroadcast,
   isEngineInternalMessage,
-  isModelManagerMessage,
   isOpenTranslatorMessage,
   isUiToEngineMessage,
   type EngineBroadcast,
   type OpenTranslatorMessage,
 } from '@/lib/messaging/protocol';
+import { isExtensionPageSender, isPrivilegedEngineMessage } from '@/lib/messaging/sender';
 import {
   buildTranslatorUrl,
   discardTranslatorContext,
@@ -36,11 +36,11 @@ let engineReadyPromise: Promise<void> | null = null;
 function whenEngineReady(): Promise<void> {
   if (engineReadyPromise) return engineReadyPromise;
   engineReadyPromise = new Promise<void>((resolve) => {
-    const onReady = (msg: unknown) => {
-      if (isEngineInternalMessage(msg)) {
-        browser.runtime.onMessage.removeListener(onReady);
-        resolve();
-      }
+    const onReady = (msg: unknown, sender: { url?: string }) => {
+      if (!isEngineInternalMessage(msg)) return;
+      if (!isExtensionPageSender(sender.url, browser.runtime.getURL('/'))) return;
+      browser.runtime.onMessage.removeListener(onReady);
+      resolve();
     };
     browser.runtime.onMessage.addListener(onReady);
     // Safety: if the offscreen document was created in a previous service
@@ -54,23 +54,23 @@ function whenEngineReady(): Promise<void> {
   return engineReadyPromise;
 }
 
-/**
- * Delivers engine lifecycle messages to content scripts. Runtime messages
- * reach extension pages (popup/background/offscreen), but content scripts
- * must be addressed through their tab.
- */
-function forwardToContentScripts(message: EngineBroadcast): void {
-  void browser.tabs
-    .query({})
-    .then((tabs) =>
-      Promise.all(
-        tabs.map((tab) => {
-          if (tab.id == null) return undefined;
-          return browser.tabs.sendMessage(tab.id, message).catch(() => undefined);
-        }),
-      ),
-    )
-    .catch(() => {});
+/** Content-script translations are delivered only back to the tab that asked. */
+const translationTabs = new Map<string, number>();
+
+function noteTranslationOrigin(message: unknown, sender: { url?: string; tab?: { id?: number } }): void {
+  if (!isUiToEngineMessage(message) || message.type !== 'translate:request') return;
+  if (isExtensionPageSender(sender.url, browser.runtime.getURL('/'))) return;
+  if (sender.tab?.id == null) return;
+  translationTabs.set(message.requestId, sender.tab.id);
+}
+
+function forwardEngineBroadcast(message: EngineBroadcast): void {
+  const tabId = translationTabs.get(message.requestId);
+  if (message.type === 'translate:result' || message.type === 'translate:error') {
+    translationTabs.delete(message.requestId);
+  }
+  if (tabId == null) return;
+  void browser.tabs.sendMessage(tabId, message).catch(() => undefined);
 }
 
 /**
@@ -79,7 +79,7 @@ function forwardToContentScripts(message: EngineBroadcast): void {
  */
 function publishFirefoxBroadcast(message: EngineBroadcast): void {
   void browser.runtime.sendMessage(message).catch(() => {});
-  forwardToContentScripts(message);
+  forwardEngineBroadcast(message);
 }
 
 /**
@@ -89,10 +89,11 @@ function publishFirefoxBroadcast(message: EngineBroadcast): void {
  */
 function startFirefoxEngine(): void {
   const pendingMessages: unknown[] = [];
-  const bufferMessage = (message: unknown) => {
-    if (isUiToEngineMessage(message) || isModelManagerMessage(message)) {
-      pendingMessages.push(message);
+  const bufferMessage = (message: unknown, sender: { url?: string }) => {
+    if (isPrivilegedEngineMessage(message) && !isExtensionPageSender(sender.url, browser.runtime.getURL('/'))) {
+      return undefined;
     }
+    if (isUiToEngineMessage(message)) pendingMessages.push(message);
     return undefined;
   };
   browser.runtime.onMessage.addListener(bufferMessage);
@@ -145,6 +146,10 @@ async function openSelectionFallback(selectionText: string | undefined): Promise
 export default defineBackground(() => {
   console.log('[Translatly] Background script loaded');
 
+  browser.runtime.onMessage.addListener((msg: unknown, sender) => {
+    noteTranslationOrigin(msg, sender);
+  });
+
   // Create context menu for translating selected text
   browser.contextMenus.create({
     id: 'translate-selection',
@@ -174,12 +179,17 @@ export default defineBackground(() => {
   if (supportsOffscreen()) {
     // Chromium MV3: relay UI messages to the offscreen engine host. Results
     // come back as engine broadcasts and are forwarded to content scripts.
-    browser.runtime.onMessage.addListener(async (msg: unknown) => {
+    browser.runtime.onMessage.addListener(async (msg: unknown, sender) => {
       if (isEngineBroadcast(msg)) {
-        forwardToContentScripts(msg);
+        forwardEngineBroadcast(msg);
         return undefined;
       }
       if (!isUiToEngineMessage(msg)) return undefined;
+      // Relaying repeats the message as the background page. Never upgrade a
+      // content-script command into a privileged extension-page command.
+      if (isPrivilegedEngineMessage(msg) && !isExtensionPageSender(sender.url, browser.runtime.getURL('/'))) {
+        return undefined;
+      }
       await ensureOffscreenDocument();
       await whenEngineReady();
       browser.runtime.sendMessage(msg).catch(() => {});
