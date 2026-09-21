@@ -65,7 +65,7 @@ export async function fetchPinnedModelFile(
   pins?: Record<string, ModelPin>,
 ): Promise<Response> {
   const parsed = parsePinnedModelUrl(requestUrl(input));
-  if (!parsed) throw new Error('Blocked untrusted model download');
+  if (!parsed) throw new Error(`Blocked untrusted model download: ${requestUrl(input)}`);
 
   const pin = pins?.[parsed.modelId] ?? getModelPin(parsed.modelId);
   const response = await fetcher(input, init);
