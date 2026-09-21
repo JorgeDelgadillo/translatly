@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isExtensionPageSender, isPrivilegedEngineMessage } from '@/lib/messaging/sender';
+import {
+  engineCommandFrom,
+  isExtensionPageSender,
+  isPrivilegedEngineMessage,
+} from '@/lib/messaging/sender';
 
 const extensionRoot = 'chrome-extension://abcdefghijklmnop/';
 
@@ -9,6 +13,14 @@ describe('extension message senders', () => {
     expect(isExtensionPageSender('https://example.test/inbox', extensionRoot)).toBe(false);
     expect(isExtensionPageSender(undefined, extensionRoot)).toBe(false);
     expect(isExtensionPageSender('not a url', extensionRoot)).toBe(false);
+  });
+
+  it('keeps a direct command on Firefox and only the relayed copy on Chromium', () => {
+    const command = { type: 'model:status:request', modelId: 'Xenova/opus-mt-en-es' };
+    expect(engineCommandFrom(command, false)).toBe(command);
+    expect(engineCommandFrom(command, true)).toBeUndefined();
+    expect(engineCommandFrom({ type: 'engine:relay', message: command }, true)).toBe(command);
+    expect(engineCommandFrom({ type: 'engine:ready' }, true)).toBeUndefined();
   });
 
   it('treats model control and cancel-all as privileged', () => {

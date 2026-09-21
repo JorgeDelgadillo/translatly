@@ -192,7 +192,7 @@ export default defineBackground(() => {
       }
       await ensureOffscreenDocument();
       await whenEngineReady();
-      browser.runtime.sendMessage(msg).catch(() => {});
+      browser.runtime.sendMessage({ type: 'engine:relay', message: msg }).catch(() => {});
       return undefined;
     });
   } else {
