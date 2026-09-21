@@ -38,6 +38,12 @@ loadDefaultLanguages().then((d) => {
   defaults = d;
 });
 
+function lockHost(host: HTMLElement, styles: Record<string, string>): void {
+  for (const [property, value] of Object.entries(styles)) {
+    host.style.setProperty(property, value, 'important');
+  }
+}
+
 const MAX_SELECTION_LENGTH = 5000;
 
 function getSelectionInfo(): { text: string; rect: DOMRect } | undefined {
@@ -59,10 +65,15 @@ async function showBubble(text: string, rect: DOMRect) {
   // Create host element
   bubbleHost = document.createElement('div');
   bubbleHost.id = 'translatly-bubble-host';
-  bubbleHost.style.position = 'fixed';
-  bubbleHost.style.zIndex = '2147483647';
-  bubbleHost.style.width = 'min(380px, calc(100vw - 24px))';
-  bubbleHost.style.pointerEvents = 'none';
+  // Inline !important keeps the page from stretching or moving the host.
+  lockHost(bubbleHost, {
+    position: 'fixed',
+    'z-index': '2147483647',
+    width: 'min(380px, calc(100vw - 24px))',
+    margin: '0',
+    transform: 'none',
+    'pointer-events': 'none',
+  });
 
   // Position in viewport coordinates because the host is fixed to the viewport.
   const margin = 12;
@@ -76,8 +87,10 @@ async function showBubble(text: string, rect: DOMRect) {
       : Math.max(margin, Math.min(rect.bottom + 8, maxTop));
   const maxLeft = Math.max(margin, window.innerWidth - bubbleWidth - margin);
   const left = Math.min(Math.max(rect.left, margin), maxLeft);
-  bubbleHost.style.top = `${top}px`;
-  bubbleHost.style.left = `${left}px`;
+  lockHost(bubbleHost, {
+    top: `${top}px`,
+    left: `${left}px`,
+  });
 
   document.body.appendChild(bubbleHost);
 
@@ -128,7 +141,7 @@ async function showBubble(text: string, rect: DOMRect) {
     },
   });
   // Enable pointer events after mount
-  bubbleHost.style.pointerEvents = 'auto';
+  lockHost(bubbleHost, { 'pointer-events': 'auto' });
 
   // Let the component register its listener before the engine can answer.
   queueMicrotask(() => {
@@ -167,16 +180,22 @@ async function showTrigger(text: string, rect: DOMRect) {
 
   triggerHost = document.createElement('div');
   triggerHost.id = 'translatly-trigger-host';
-  triggerHost.style.position = 'fixed';
-  triggerHost.style.zIndex = '2147483647';
-  triggerHost.style.width = `${TRIGGER_SIZE}px`;
-  triggerHost.style.height = `${TRIGGER_SIZE}px`;
-  triggerHost.style.pointerEvents = 'none';
+  lockHost(triggerHost, {
+    position: 'fixed',
+    'z-index': '2147483647',
+    width: `${TRIGGER_SIZE}px`,
+    height: `${TRIGGER_SIZE}px`,
+    'max-width': `${TRIGGER_SIZE}px`,
+    'max-height': `${TRIGGER_SIZE}px`,
+    margin: '0',
+    transform: 'none',
+    'pointer-events': 'none',
+  });
 
   positionTrigger(rect);
   document.body.appendChild(triggerHost);
 
-  triggerShadow = triggerHost.attachShadow({ mode: 'open' });
+  triggerShadow = triggerHost.attachShadow({ mode: 'closed' });
 
   const TriggerComponent = await loadTrigger();
   pendingTrigger = { text, rect };
@@ -192,7 +211,7 @@ async function showTrigger(text: string, rect: DOMRect) {
     },
   });
   // Enable pointer events after mount
-  triggerHost.style.pointerEvents = 'auto';
+  lockHost(triggerHost, { 'pointer-events': 'auto' });
 }
 
 function positionTrigger(rect: DOMRect) {
@@ -205,8 +224,10 @@ function positionTrigger(rect: DOMRect) {
   }
   left = Math.max(TRIGGER_MARGIN, Math.min(left, window.innerWidth - TRIGGER_SIZE - TRIGGER_MARGIN));
   top = Math.max(TRIGGER_MARGIN, Math.min(top, window.innerHeight - TRIGGER_SIZE - TRIGGER_MARGIN));
-  triggerHost.style.left = `${left}px`;
-  triggerHost.style.top = `${top}px`;
+  lockHost(triggerHost, {
+    left: `${left}px`,
+    top: `${top}px`,
+  });
 }
 
 function hideTrigger() {
@@ -250,6 +271,9 @@ export default defineContentScript({
     document.addEventListener(
       'mouseup',
       (e) => {
+        // Page scripts can dispatch mouseup, but only a real user gesture may
+        // reveal the translate control.
+        if (!e.isTrusted) return;
         // Ignore interactions inside the extension's own surfaces
         if (bubbleHost && bubbleHost.contains(e.target as Node)) return;
         if (triggerHost && triggerHost.contains(e.target as Node)) return;
@@ -264,6 +288,7 @@ export default defineContentScript({
     document.addEventListener(
       'mousedown',
       (e) => {
+        if (!e.isTrusted) return;
         const target = e.target as Node;
         if (bubbleHost && bubbleHost.contains(target)) return;
         if (triggerHost && triggerHost.contains(target)) return;
@@ -277,6 +302,7 @@ export default defineContentScript({
     document.addEventListener(
       'keydown',
       (e) => {
+        if (!e.isTrusted) return;
         if (e.key === 'Escape') {
           hideBubble();
           hideTrigger();
@@ -285,8 +311,15 @@ export default defineContentScript({
       true,
     );
 
-    // The trigger floats near the selection; drop it when the page moves.
-    document.addEventListener('scroll', () => hideTrigger(), true);
+    // The trigger floats near the selection; drop it when the user scrolls.
+    document.addEventListener(
+      'scroll',
+      (event) => {
+        if (!event.isTrusted) return;
+        hideTrigger();
+      },
+      true,
+    );
 
     // Listen for messages from background (e.g., context menu). The listener
     // returns false so the sender's sendMessage promise settles immediately;

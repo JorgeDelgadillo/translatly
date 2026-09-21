@@ -15,7 +15,10 @@
   type="button"
   aria-label="Translate with Translatly"
   title="Translate with Translatly"
-  onclick={onClick}
+  onclick={(event) => {
+    if (!event.isTrusted) return;
+    onClick();
+  }}
 >
   <span class="mark" aria-hidden="true">T</span>
 </button>

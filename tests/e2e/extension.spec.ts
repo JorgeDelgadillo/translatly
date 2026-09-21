@@ -93,14 +93,22 @@ test('shows a translate trigger for selected text, opens the bubble on click, an
   const page = await context!.newPage();
   await page.setViewportSize({ width: 360, height: 640 });
   await page.goto(contentUrl);
-  await page.locator('#selection').selectText();
-  await page.evaluate(() => document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })));
+  const selection = page.locator('#selection');
+  const selectionBox = await selection.boundingBox();
+  if (!selectionBox) throw new Error('Could not measure the selection target');
+  await page.mouse.move(selectionBox.x + 1, selectionBox.y + selectionBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(selectionBox.x + selectionBox.width - 1, selectionBox.y + selectionBox.height / 2);
+  await page.mouse.up();
 
   const triggerHost = page.locator('#translatly-trigger-host');
   await expect(triggerHost).toBeAttached();
 
-  // Clicking the trigger opens the translation bubble.
-  await triggerHost.locator('button').click();
+  // A real click on the host opens the translation bubble. The button lives in
+  // a closed shadow root, so the hit target is the host box itself.
+  const triggerBox = await triggerHost.boundingBox();
+  if (!triggerBox) throw new Error('Could not measure the translate trigger');
+  await page.mouse.click(triggerBox.x + triggerBox.width / 2, triggerBox.y + triggerBox.height / 2);
 
   const bubbleHost = page.locator('#translatly-bubble-host');
   await expect(bubbleHost).toBeAttached();
