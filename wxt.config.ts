@@ -43,17 +43,14 @@ export default defineConfig({
       // engine in the persistent background page instead.
       // `storage` holds the user's default language pair.
       // `contextMenus` enables the "Translate with Translatly" right-click menu.
-      // `scripting` powers the context-menu fallback when a page's content
-      // script is not reachable.
       permissions:
         browser === 'firefox'
           ? ['storage', 'contextMenus']
-          : ['offscreen', 'storage', 'contextMenus', 'scripting'],
-      // Models are downloaded on demand from the Hugging Face CDN. This is
-      // the only remote origin the extension ever talks to.
-      // `<all_urls>` is required so the content script can run on any page
-      // to detect text selection and show the translation bubble.
-      host_permissions: ['https://huggingface.co/*', '<all_urls>'],
+          : ['offscreen', 'storage', 'contextMenus'],
+      // Model downloads start on huggingface.co and follow redirects onto the
+      // Hugging Face CDN (for example us.aws.cdn.hf.co). No other origin is
+      // granted. The content script's own match pattern covers page injection.
+      host_permissions: ['https://huggingface.co/*', 'https://*.hf.co/*'],
       content_security_policy:
         manifestVersion === 2 ? csp : { extension_pages: csp },
       ...(browser === 'firefox'

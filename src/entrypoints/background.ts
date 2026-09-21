@@ -133,27 +133,12 @@ async function deliverTranslateSelection(tabId: number): Promise<boolean> {
 }
 
 /**
- * Fallback for pages whose content script is missing: reads the selected text
- * directly from the page and opens the full translator with it.
+ * Fallback for pages whose content script is missing. The context-menu click
+ * already carries the selected text, so the extension does not inject a script
+ * into the page. Browsers may truncate `selectionText`.
  */
-async function translateSelectionFallback(tabId: number): Promise<void> {
-  let text = '';
-  if (import.meta.env.FIREFOX) {
-    // Firefox's scripting.executeScript does not support `func`, so use the
-    // tabs.executeScript equivalent. `<all_urls>` host permission covers it.
-    const results = await browser.tabs.executeScript(tabId, {
-      allFrames: true,
-      code: 'window.getSelection()?.toString().trim() ?? ""',
-    });
-    text = (results ?? []).find((result) => typeof result === 'string' && result) ?? '';
-  } else {
-    const results = await browser.scripting.executeScript({
-      target: { tabId, allFrames: true },
-      func: () => window.getSelection()?.toString().trim() ?? '',
-    });
-    text =
-      results.find((result) => typeof result.result === 'string' && result.result)?.result ?? '';
-  }
+async function openSelectionFallback(selectionText: string | undefined): Promise<void> {
+  const text = selectionText?.trim() ?? '';
   if (text) await openTranslatorPage({ type: 'translator:open', text });
 }
 
@@ -173,8 +158,8 @@ export default defineBackground(() => {
     if (info.menuItemId !== 'translate-selection' || !tab?.id) return;
     const delivered = await deliverTranslateSelection(tab.id);
     if (!delivered) {
-      console.error('[Translatly] Content script not reachable; using fallback for tab', tab.id);
-      await translateSelectionFallback(tab.id).catch((error) =>
+      console.error('[Translatly] Content script not reachable; opening the translator for tab', tab.id);
+      await openSelectionFallback(info.selectionText).catch((error) =>
         console.error('[Translatly] Fallback translation failed:', error),
       );
     }
