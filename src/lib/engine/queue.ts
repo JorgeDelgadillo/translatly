@@ -73,6 +73,7 @@ export class TranslationQueue {
     const idx = this.pending.findIndex((j) => j.requestId === requestId);
     if (idx >= 0) {
       const [job] = this.pending.splice(idx, 1);
+      if (!job) return;
       job.controller.abort();
       this.broadcastCancelled(requestId);
       return;
@@ -108,6 +109,7 @@ export class TranslationQueue {
     const idx = this.modelOperations.findIndex((operation) => operation.requestId === requestId);
     if (idx >= 0) {
       const [operation] = this.modelOperations.splice(idx, 1);
+      if (!operation) return false;
       operation.controller.abort();
       operation.onCancel?.();
       return true;
