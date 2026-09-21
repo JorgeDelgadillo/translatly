@@ -150,13 +150,15 @@ export default defineBackground(() => {
     noteTranslationOrigin(msg, sender);
   });
 
-  // Create context menu for translating selected text
-  browser.contextMenus.create({
-    id: 'translate-selection',
-    title: 'Translate with Translatly',
-    contexts: ['selection'],
-  });
-  console.log('[Translatly] Context menu created');
+  // The service worker restarts often. Chrome keeps the previous item, so
+  // creating it again reports "duplicate id" unless the old one is removed.
+  void browser.contextMenus.remove('translate-selection').catch(() => undefined).then(() =>
+    browser.contextMenus.create({
+      id: 'translate-selection',
+      title: 'Translate with Translatly',
+      contexts: ['selection'],
+    }),
+  );
 
   // Handle context menu clicks
   browser.contextMenus.onClicked.addListener(async (info, tab) => {

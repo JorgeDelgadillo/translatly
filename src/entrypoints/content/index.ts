@@ -1,18 +1,30 @@
 import { browser } from 'wxt/browser';
-import { mount, unmount } from 'svelte';
+import type { mount as mountComponent, unmount as unmountComponent } from 'svelte';
 import { sendTranslateCancel, sendTranslateRequest } from '@/lib/messaging/translate';
 import { loadDefaultLanguages } from '@/lib/settings';
 import { MAX_TRANSLATION_CHARS } from '@/lib/limits';
+import { concealContentScriptTrustedTypes } from './trusted-types';
+
+concealContentScriptTrustedTypes();
+
+type Mounted = ReturnType<typeof mountComponent>;
+let svelteRuntime: { mount: typeof mountComponent; unmount: typeof unmountComponent } | null = null;
+
+async function loadSvelteRuntime() {
+  concealContentScriptTrustedTypes();
+  if (!svelteRuntime) svelteRuntime = await import('svelte');
+  return svelteRuntime;
+}
 
 let bubbleHost: HTMLDivElement | null = null;
 let bubbleShadow: ShadowRoot | null = null;
-let bubbleComponent: ReturnType<typeof mount> | null = null;
+let bubbleComponent: Mounted | null = null;
 let currentRequestId: string | null = null;
 let defaults = { source: 'en', target: 'es' };
 
 let triggerHost: HTMLDivElement | null = null;
 let triggerShadow: ShadowRoot | null = null;
-let triggerComponent: ReturnType<typeof mount> | null = null;
+let triggerComponent: Mounted | null = null;
 let pendingTrigger: { text: string; rect: DOMRect } | null = null;
 
 // Lazy load components to avoid SSR issues during pre-rendering
@@ -131,6 +143,7 @@ async function showBubble(text: string, rect: DOMRect) {
   const requestId = crypto.randomUUID();
   currentRequestId = requestId;
 
+  const { mount } = await loadSvelteRuntime();
   bubbleComponent = mount(BubbleComponent, {
     target: bubbleShadow,
     props: {
@@ -158,7 +171,7 @@ function hideBubble() {
   }
 
   if (bubbleComponent) {
-    unmount(bubbleComponent);
+    svelteRuntime?.unmount(bubbleComponent);
     bubbleComponent = null;
   }
   if (bubbleHost) {
@@ -200,6 +213,7 @@ async function showTrigger(text: string, rect: DOMRect) {
 
   const TriggerComponent = await loadTrigger();
   pendingTrigger = { text, rect };
+  const { mount } = await loadSvelteRuntime();
   triggerComponent = mount(TriggerComponent, {
     target: triggerShadow,
     props: {
@@ -234,7 +248,7 @@ function positionTrigger(rect: DOMRect) {
 function hideTrigger() {
   pendingTrigger = null;
   if (triggerComponent) {
-    unmount(triggerComponent);
+    svelteRuntime?.unmount(triggerComponent);
     triggerComponent = null;
   }
   if (triggerHost) {
