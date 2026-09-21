@@ -93,6 +93,21 @@ describe('translation queue', () => {
     expect(translateMock).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects text above the translation character limit', () => {
+    const events: unknown[] = [];
+    const queue = new TranslationQueue((event) => events.push(event));
+    const oversized = request('big');
+    oversized.text = 'a'.repeat(5001);
+
+    expect(queue.enqueue(oversized)).toEqual({ position: 0 });
+    expect(translateMock).not.toHaveBeenCalled();
+    expect(events).toContainEqual({
+      type: 'translate:error',
+      requestId: 'big',
+      error: 'Text exceeds the 5000 character limit',
+    });
+  });
+
   it('cancels queued and active model operations by request id', async () => {
     const queue = new TranslationQueue();
     let releaseActive!: () => void;

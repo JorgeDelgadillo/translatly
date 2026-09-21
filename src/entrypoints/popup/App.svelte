@@ -10,6 +10,7 @@
   import { languageLabel, translate, type MessageKey } from '@/lib/i18n';
   import { applyDocumentPreferences } from '@/lib/theme';
   import { openTranslatorPage } from '@/lib/messaging/navigation';
+  import { MAX_TRANSLATION_CHARS } from '@/lib/limits';
 
   type Status =
     | { kind: 'idle' }
@@ -190,12 +191,12 @@
   <section class="editor-card" aria-labelledby="input-title">
     <div class="editor-heading">
       <span id="input-title">{localizedLanguageName(source)}</span>
-      <span>{text.length}/5000</span>
+      <span>{text.length}/{MAX_TRANSLATION_CHARS}</span>
     </div>
     <textarea
       bind:value={text}
       rows="5"
-      maxlength="5000"
+      maxlength={MAX_TRANSLATION_CHARS}
       aria-label={tx('textToTranslate')}
       placeholder={tx('textPlaceholder')}
       onkeydown={(event) => {

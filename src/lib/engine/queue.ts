@@ -6,6 +6,7 @@ import type {
   TranslateErrorMessage,
   TranslateRequestMessage,
 } from '@/lib/messaging/protocol';
+import { MAX_TRANSLATION_CHARS } from '@/lib/limits';
 
 export type BroadcastHandler = (message: EngineBroadcast) => void;
 
@@ -44,6 +45,15 @@ export class TranslationQueue {
   constructor(private readonly emit: BroadcastHandler = defaultBroadcast) {}
 
   enqueue(req: TranslateRequestMessage): { position: number } {
+    if (typeof req.text !== 'string' || req.text.length > MAX_TRANSLATION_CHARS) {
+      this.broadcast({
+        type: 'translate:error',
+        requestId: req.requestId,
+        error: `Text exceeds the ${MAX_TRANSLATION_CHARS} character limit`,
+      });
+      return { position: 0 };
+    }
+
     const controller = new AbortController();
     const job: Job = {
       requestId: req.requestId,

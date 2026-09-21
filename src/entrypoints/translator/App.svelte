@@ -25,6 +25,7 @@
   import { languageLabel, translate, type MessageKey } from '@/lib/i18n';
   import { applyDocumentPreferences } from '@/lib/theme';
   import { consumeTranslatorContext } from '@/lib/messaging/navigation';
+  import { MAX_TRANSLATION_CHARS } from '@/lib/limits';
 
   type Status =
     | { kind: 'idle' }
@@ -531,7 +532,7 @@
             aria-label={tx('textToTranslate')}
             aria-keyshortcuts="Control+Enter Meta+Enter"
             placeholder={tx('textPlaceholder')}
-            maxlength="5000"
+            maxlength={MAX_TRANSLATION_CHARS}
           ></textarea>
           <div class="editor-footer">
             <span>{displayLanguageName(source)} · {tx('staysOnDevice')}</span>

@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { mount, unmount } from 'svelte';
 import { sendTranslateCancel, sendTranslateRequest } from '@/lib/messaging/translate';
 import { loadDefaultLanguages } from '@/lib/settings';
+import { MAX_TRANSLATION_CHARS } from '@/lib/limits';
 
 let bubbleHost: HTMLDivElement | null = null;
 let bubbleShadow: ShadowRoot | null = null;
@@ -44,7 +45,7 @@ function lockHost(host: HTMLElement, styles: Record<string, string>): void {
   }
 }
 
-const MAX_SELECTION_LENGTH = 5000;
+const MAX_SELECTION_LENGTH = MAX_TRANSLATION_CHARS;
 
 function getSelectionInfo(): { text: string; rect: DOMRect } | undefined {
   const selection = window.getSelection();
