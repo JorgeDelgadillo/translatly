@@ -44,7 +44,14 @@ function modelLoadOptions(modelId: string): { dtype: 'int8'; revision: string } 
   return { dtype: 'int8', revision: pin.revision };
 }
 
-function configureEnvironment(wasmBaseUrl: string, signal?: AbortSignal): void {
+function configureEnvironment(modelId: string, wasmBaseUrl: string, signal?: AbortSignal): void {
+  const pin = getModelPin(modelId);
+  if (!pin) throw new Error(`Unpinned translation model: ${modelId}`);
+  // Transformers.js lists pipeline files without forwarding `revision`, so the
+  // default template would request `main`. Bake the pinned commit into the
+  // template before any library call for this model.
+  env.remoteHost = 'https://huggingface.co/';
+  env.remotePathTemplate = `{model}/resolve/${pin.revision}/`;
   // Models come from the pinned Hugging Face commits; nothing else may be loaded.
   env.allowLocalModels = false;
   env.allowRemoteModels = true;
@@ -78,7 +85,7 @@ async function getTranslator(
   modelId: string,
   options: TranslateOptions,
 ): Promise<TranslationPipeline> {
-  configureEnvironment(options.wasmBaseUrl, options.signal);
+  configureEnvironment(modelId, options.wasmBaseUrl, options.signal);
   if (options.signal?.aborted) throw createAbortError();
   const cached = cache.get(modelId);
   if (cached) return cached;
@@ -163,14 +170,14 @@ export async function preloadModel(modelId: string, options: TranslateOptions): 
 /** Checks the Transformers.js pipeline cache without loading model weights. */
 export async function isModelCached(modelId: string, options: TranslateOptions): Promise<boolean> {
   if (!getModelDescriptor(modelId)) throw new Error(`Unknown translation model: ${modelId}`);
-  configureEnvironment(options.wasmBaseUrl);
+  configureEnvironment(modelId, options.wasmBaseUrl);
   return ModelRegistry.is_pipeline_cached('translation', modelId, modelLoadOptions(modelId));
 }
 
 /** Disposes the in-memory pipeline and clears its on-device cache entries. */
 export async function removeModel(modelId: string, options: TranslateOptions): Promise<void> {
   if (!getModelDescriptor(modelId)) throw new Error(`Unknown translation model: ${modelId}`);
-  configureEnvironment(options.wasmBaseUrl);
+  configureEnvironment(modelId, options.wasmBaseUrl);
   const cached = cache.get(modelId);
   if (cached) {
     cache.delete(modelId);
