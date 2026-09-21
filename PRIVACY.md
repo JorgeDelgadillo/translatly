@@ -1,6 +1,6 @@
 # Translatly Privacy Policy
 
-Last updated: 2026-08-17
+Last updated: 2026-09-21
 
 Translatly is a local-first browser extension for Chromium and Firefox. This
 policy describes how Translatly handles information when you use the extension.
@@ -10,7 +10,10 @@ policy describes how Translatly handles information when you use the extension.
 When you explicitly request a translation, Translatly may handle:
 
 - Text that you enter in the popup or full translator.
-- Text that you select on a web page and send to the translation bubble.
+- Text that you select on a web page. Finishing a selection shows a translate
+  icon and keeps that selection in the page's content script. Translation
+  starts when you click the icon, use the context menu, or submit the popup
+  or full translator.
 - Translation results and history that you choose to save locally.
 
 This information is processed on your device by bundled ONNX Runtime Web and
@@ -18,16 +21,21 @@ local translation models. Translatly does not send translation text, selected
 text, translation results, or history to the developer, an analytics service, a
 remote translation API, or an advertising service.
 
-Language preferences and other non-text preferences are stored through the
-browser's extension storage. Translation history remains in local extension
-storage and is not synchronized by Translatly.
+Language, theme, and other non-text preferences are stored with
+`browser.storage.sync`. If you use Chrome Sync or Firefox Sync, the browser
+may copy those preferences to your account. They do not include translation
+text, results, or history. Translation history stays in `browser.storage.local`
+on this device and is not synchronized by Translatly.
 
 ## Model Downloads
 
-When you request a model, Translatly downloads model data from the approved
-Hugging Face origin. These downloads contain model files, not your translation
-text. Hugging Face may process ordinary network information according to its
-own [Privacy Policy](https://huggingface.co/privacy).
+When you request a model, Translatly downloads that model's files from a
+reviewed Hugging Face commit. Each file is checked against a SHA-256 digest
+shipped in the extension before it is used. These downloads contain model
+files, not your translation text. Hugging Face may process ordinary network
+information according to its own [Privacy Policy](https://huggingface.co/privacy).
+The download may follow a redirect from `huggingface.co` to the Hugging Face
+CDN on `*.hf.co`.
 
 Translatly does not download or execute JavaScript, WebAssembly, native code,
 or other executable program code at runtime. Runtime code and ONNX Runtime
@@ -58,10 +66,14 @@ Translatly uses the following permissions to provide its user-facing features:
 
 - `storage`: save preferences and local translation history.
 - `contextMenus`: provide the user-invoked translation context-menu action.
+  The menu click includes the selected text, which Translatly uses only if the
+  page's content script is not available.
 - `offscreen` on Chromium: host local inference outside the service worker.
-- `<all_urls>`: detect explicit text selections and show the translation bubble
-  on supported web pages.
-- `https://huggingface.co/*`: download requested model data.
+- A content script on all web pages: show the translate icon for a selection
+  you make and the translation bubble after you ask to translate. This does
+  not grant the extension permission to fetch those sites.
+- `https://huggingface.co/*` and `https://*.hf.co/*`: download requested model
+  data from Hugging Face and its CDN.
 
 The extension does not collect browsing history, page contents in the
 background, credentials, payment information, location, or identifying account
