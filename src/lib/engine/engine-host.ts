@@ -9,7 +9,7 @@ import {
   type ModelDeleteRequestMessage,
   type ModelStatusRequestMessage,
 } from '@/lib/messaging/protocol';
-import { isExtensionPageSender, isPrivilegedEngineMessage } from '@/lib/messaging/sender';
+import { engineCommandFrom, isExtensionPageSender, isPrivilegedEngineMessage } from '@/lib/messaging/sender';
 import { getModelDescriptor, type ModelDescriptor } from './registry';
 import {
   isModelCached,
@@ -20,6 +20,11 @@ import {
 
 export interface EngineHostOptions {
   onBroadcast?: (message: EngineBroadcast) => void;
+  /**
+   * Chromium's offscreen document already receives UI messages directly.
+   * Set this so it runs only the background's relayed copy.
+   */
+  relayedOnly?: boolean;
 }
 
 /**
@@ -109,7 +114,9 @@ async function handleModelRequest(
 export function startEngineHost(options: EngineHostOptions = {}): void {
   const queue = new TranslationQueue(options.onBroadcast);
 
-  browser.runtime.onMessage.addListener((msg: unknown, sender) => {
+  browser.runtime.onMessage.addListener((message: unknown, sender) => {
+    const msg = engineCommandFrom(message, options.relayedOnly === true);
+    if (msg === undefined) return undefined;
     if (
       isPrivilegedEngineMessage(msg) &&
       !isExtensionPageSender(sender.url, browser.runtime.getURL('/'))

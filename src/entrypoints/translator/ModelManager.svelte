@@ -48,6 +48,7 @@
     const off = onModelBroadcast((message) => {
       switch (message.type) {
         case 'model:status':
+          if (activeModelId === message.modelId) break;
           states[message.modelId] = {
             status: message.cached ? 'ready' : 'not-installed',
             estimatedBytes: message.estimatedBytes,
